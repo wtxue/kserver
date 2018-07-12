@@ -166,7 +166,7 @@ InvokeTimerPtr EventLoop::RunAfter(double delay_ms, const Functor& f) {
 }
 
 InvokeTimerPtr EventLoop::RunAfter(double delay_ms, Functor&& f) {
-	DLOG_TRACE("RunAfter");
+	DLOG_TRACE("RunAfter std::move");
     return RunAfter(Duration(delay_ms / 1000.0), std::move(f));
 }
 
@@ -178,7 +178,7 @@ InvokeTimerPtr EventLoop::RunAfter(Duration delay, const Functor& f) {
 }
 
 InvokeTimerPtr EventLoop::RunAfter(Duration delay, Functor&& f) {
-	DLOG_TRACE("RunAfter delay:%fs",delay.Seconds());
+	DLOG_TRACE("RunAfter delay:%fs std::move",delay.Seconds());
     std::shared_ptr<InvokeTimer> t = InvokeTimer::Create(this, delay, std::move(f), false);
     t->Start();
     return t;
@@ -192,7 +192,7 @@ net::InvokeTimerPtr EventLoop::RunEvery(Duration interval, const Functor& f) {
 }
 
 net::InvokeTimerPtr EventLoop::RunEvery(Duration interval, Functor&& f) {
-	DLOG_TRACE("RunEvery");
+	DLOG_TRACE("RunEvery std::move");
     std::shared_ptr<InvokeTimer> t = InvokeTimer::Create(this, interval, std::move(f), true);
     t->Start();
     return t;
@@ -208,7 +208,7 @@ void EventLoop::RunInLoop(const Functor& functor) {
 }
 
 void EventLoop::RunInLoop(Functor&& functor) {
-	DLOG_TRACE("RunInLoop functor");
+	DLOG_TRACE("RunInLoop functor std::move");
     if (IsRunning() && IsInLoopThread()) {
         functor();
     } else {
@@ -217,7 +217,8 @@ void EventLoop::RunInLoop(Functor&& functor) {
 }
 
 void EventLoop::QueueInLoop(const Functor& cb) {
-    DLOG_TRACE("pending_functor_count_:%d PendingQueueSize:%d notified_:%d",pending_functor_count_.load(), GetPendingQueueSize(),notified_.load());
+    DLOG_TRACE("pending_functor_count_:%d PendingQueueSize:%d notified_:%d", 
+    				pending_functor_count_.load(), GetPendingQueueSize(),notified_.load());
     {
 #ifdef H_HAVE_BOOST
         auto f = new Functor(cb);
@@ -249,16 +250,18 @@ void EventLoop::QueueInLoop(const Functor& cb) {
 			DLOG_TRACE("call watcher_->Nofity loop exec");
             watcher_->Notify();
         } else {
-            DLOG_TRACE("status=%s",StatusToString().c_str());
+            DLOG_TRACE("status:%s", StatusToString().c_str());
             assert(!IsRunning());
         }
-    } else {
+    } 
+    else {
          DLOG_TRACE("No need to call watcher_->Nofity()");
     }
 }
 
 void EventLoop::QueueInLoop(Functor&& cb) {
-    DLOG_TRACE("pending_functor_count_=%d PendingQueueSize=%d notified_=%d",pending_functor_count_.load(), GetPendingQueueSize(),notified_.load());
+    DLOG_TRACE("pending_functor_count_=%d PendingQueueSize=%d notified_=%d",
+    			pending_functor_count_.load(), GetPendingQueueSize(),notified_.load());
     {
 #ifdef H_HAVE_BOOST
         auto f = new Functor(std::move(cb)); // TODO Add test code for it

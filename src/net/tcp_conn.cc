@@ -29,11 +29,11 @@ TCPConn::TCPConn(EventLoop* l,
         chan_->SetWriteCallback(std::bind(&TCPConn::HandleWrite, this));        
     }
 
-    DLOG_TRACE("create TCPConn[%s] channel=%p fd=%d addr=%s", name_.c_str(), chan_.get(), sockfd,AddrToString().c_str());
+    LOG_DEBUG("create TCPConn[%s] channel=%p fd=%d addr=%s", name_.c_str(), chan_.get(), sockfd,AddrToString().c_str());
 }
 
 TCPConn::~TCPConn() {
-	DLOG_TRACE("destroy TCPConn[%s] channel=%p addr=%s", name_.c_str(), chan_.get(), AddrToString().c_str());
+	LOG_DEBUG("destroy TCPConn[%s] channel=%p addr=%s", name_.c_str(), chan_.get(), AddrToString().c_str());
     assert(status_ == kDisconnected);
 
     if (fd_ >= 0) {
@@ -50,7 +50,7 @@ TCPConn::~TCPConn() {
 }
 
 void TCPConn::Close() {
-    DLOG_TRACE("fd=%d status=%s addr=%s",fd_,StatusToString().c_str(),AddrToString().c_str());
+    LOG_DEBUG("fd=%d status=%s addr=%s",fd_,StatusToString().c_str(),AddrToString().c_str());
     status_ = kDisconnecting;
     auto c = shared_from_this();
     auto f = [c]() {
@@ -180,7 +180,7 @@ void TCPConn::HandleRead() {
     } else if (n == 0) {
         if (type() == kOutgoing) {
             // This is an outgoing connection, we own it and it's done. so close it
-            DLOG_TRACE("fd=%d  We read 0 bytes and close the socket.",fd_);
+            LOG_DEBUG("fd=%d  We read 0 bytes and close the socket.",fd_);
             status_ = kDisconnecting;
             HandleClose();
         } else {
@@ -188,21 +188,22 @@ void TCPConn::HandleRead() {
 
             chan_->DisableReadEvent();
             if (close_delay_.IsZero()) {
-                DLOG_TRACE("channel (fd=%d) DisableReadEvent. We close this connection immediately",chan_->fd());
+                LOG_DEBUG("channel (fd=%d) DisableReadEvent. We close this connection immediately",chan_->fd());
                 DelayClose();
             } else {
                 // This is an incoming connection, we need to preserve the
                 // connection for a while so that we can reply to it.
                 // And we set a timer to close the connection eventually.
-                DLOG_TRACE("channel (fd=%d) DisableReadEvent. And a timer to delay close this TCPConn, time:%fs",chan_->fd(),close_delay_.Seconds());
+                LOG_DEBUG("channel (fd:%d) DisableReadEvent. And a timer to delay close this TCPConn, time:%fs",chan_->fd(),close_delay_.Seconds());
                 delay_close_timer_ = loop_->RunAfter(close_delay_, std::bind(&TCPConn::DelayClose, shared_from_this())); // TODO leave it to user layer close.
             }
         }
-    } else {
+    }
+    else {
         if (EVUTIL_ERR_RW_RETRIABLE(serrno)) {
-            DLOG_TRACE("errno=%d ",serrno);
+            LOG_ERROR("errno=%d ",serrno);
         } else {
-            DLOG_TRACE("errno=%d We are closing this connection now.",serrno);
+            LOG_DEBUG("errno=%d We are closing this connection now.",serrno);
             HandleError();
         }
     }
@@ -236,14 +237,14 @@ void TCPConn::HandleWrite() {
 
 void TCPConn::DelayClose() {
     assert(loop_->IsInLoopThread());
-    DLOG_TRACE("ENTER addr=%s fd=%d status=%s",AddrToString().c_str(),fd_,StatusToString().c_str());
+    LOG_DEBUG("ENTER addr=%s fd=%d status=%s",AddrToString().c_str(),fd_,StatusToString().c_str());
     status_ = kDisconnecting;
     delay_close_timer_.reset();
     HandleClose();
 }
 
 void TCPConn::HandleClose() {
-    //DLOG_TRACE("ENTER addr=%s fd=%d status=%s",AddrToString().c_str(),fd_,StatusToString().c_str());
+    DLOG_TRACE("ENTER addr=%s fd=%d status=%s",AddrToString().c_str(),fd_,StatusToString().c_str());
 
     // Avoid multi calling
     if (status_ == kDisconnected) {
@@ -257,14 +258,14 @@ void TCPConn::HandleClose() {
 
     status_ = kDisconnecting;
     assert(loop_->IsInLoopThread());
-    DLOG_TRACE("chan:%p DisableAllEvent Close",chan_.get());
+    LOG_DEBUG("chan:%p DisableAllEvent Close",chan_.get());
     chan_->DisableAllEvent();
     chan_->Close();
 
     TCPConnPtr conn(shared_from_this());
 
     if (delay_close_timer_) {
-        DLOG_TRACE("loop=%p Cancel the delay closing timer.",this);
+        LOG_DEBUG("loop:%p Cancel the delay closing timer.",this);
         delay_close_timer_->Cancel();
         delay_close_timer_.reset();
     }
@@ -280,12 +281,12 @@ void TCPConn::HandleClose() {
     if (close_fn_) {
         close_fn_(conn);
     }
-    DLOG_TRACE("addr=%s fd=%d status=%s use_count=%d",AddrToString().c_str(),fd_,StatusToString().c_str(),conn.use_count());
+    LOG_DEBUG("addr=%s fd=%d status=%s use_count=%d",AddrToString().c_str(),fd_,StatusToString().c_str(),conn.use_count());
     status_ = kDisconnected;
 }
 
 void TCPConn::HandleError() {
-    DLOG_TRACE("fd=%d status=%s",fd_,StatusToString().c_str());
+    LOG_DEBUG("fd=%d status=%s",fd_,StatusToString().c_str());
     status_ = kDisconnecting;
     HandleClose();
 }

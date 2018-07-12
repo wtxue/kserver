@@ -12,7 +12,7 @@ InvokeTimer::InvokeTimer(EventLoop* evloop, Duration timeout, const Functor& f, 
 
 InvokeTimer::InvokeTimer(EventLoop* evloop, Duration timeout, Functor&& f, bool periodic)
     : loop_(evloop), timeout_(timeout), functor_(std::move(f)), periodic_(periodic) {
-	DLOG_TRACE("InvokeTimer Functor");
+	DLOG_TRACE("InvokeTimer Functor std::move");
 }
 
 InvokeTimerPtr InvokeTimer::Create(EventLoop* evloop, Duration timeout, const Functor& f, bool periodic) {
@@ -32,13 +32,13 @@ InvokeTimer::~InvokeTimer() {
 }
 
 void InvokeTimer::Start() {
-    DLOG_TRACE("InvokeTimer Start refcount=%lu",self_.use_count());
+    DLOG_TRACE("InvokeTimer Start self_.use_count:%lu",self_.use_count());
     auto f = [this]() {
         timer_.reset(new TimerEventWatcher(loop_, std::bind(&InvokeTimer::OnTimerTriggered, shared_from_this()), timeout_));
         timer_->SetCancelCallback(std::bind(&InvokeTimer::OnCanceled, shared_from_this()));
         timer_->Init();
         timer_->AsyncWait();
-        DLOG_TRACE("timer loop refcount=%u periodic=%d timeout(ms)=%u",self_.use_count(),periodic_,timeout_.Milliseconds());
+        DLOG_TRACE("timer loop refcount=%u periodic=%d timeout(ms)=%fms",self_.use_count(),periodic_,timeout_.Milliseconds());
     };
     loop_->RunInLoop(std::move(f));
 }

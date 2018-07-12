@@ -15,7 +15,6 @@
 
 #pragma once
 
-#include "platform_config.h"
 #include <netdb.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h> // for TCP_NODELAY

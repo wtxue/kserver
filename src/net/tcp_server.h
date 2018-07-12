@@ -56,7 +56,7 @@ public:
     // @param name - The name of this object
     // @param thread_num - The working thread count
     TCPServer(EventLoop* loop, const std::string& laddr, const std::string& name, uint32_t thread_num);
-	TCPServer(EventLoop* loop, const std::string& laddr, const std::string& name, const std::shared_ptr<EventLoopThreadPool>& tpool);
+	TCPServer(EventLoop* loop, const std::string& laddr, const std::string& name, const EventLoopThreadPoolPtr& tpool);
     ~TCPServer();
 
     // @brief Do the initialization works here.
@@ -107,14 +107,17 @@ private:
     const std::string listen_addr_; // ip:port
     const std::string name_;
     std::unique_ptr<Listener> listener_;
-    std::shared_ptr<EventLoopThreadPool> tpool_;
+	
+    EventLoopThreadPoolPtr tpool_;
+    bool create_tpool_myself_;
+	
     ConnectionCallback conn_fn_;
     MessageCallback msg_fn_;
 
     DoneCallback stopped_cb_;
 
     // always in the listening loop thread
-    uint64_t next_conn_id_ = 0;
+    uint64_t next_conn_id_;
     typedef std::map<uint64_t, TCPConnPtr> ConnectionMap;
     ConnectionMap connections_;
 };

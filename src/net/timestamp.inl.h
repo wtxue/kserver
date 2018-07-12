@@ -53,6 +53,11 @@ inline int64_t Timestamp::UnixMicro() const {
     return ns_ / Duration::kMicrosecond;
 }
 
+inline int64_t Timestamp::UnixMs() const {
+    return ns_ / Duration::kMillisecond;
+}
+
+
 inline bool Timestamp::operator< (const Timestamp& rhs) const {
     return ns_ < rhs.ns_;
 }

@@ -79,8 +79,7 @@ void Listener::HandleAccept() {
         return;
     }
 
-    DLOG_TRACE("accepted a connection from %s, listen fd=%d, client fd=%d",raddr.c_str(),fd_,nfd);
-
+    DLOG_TRACE("accepted a connection from %s, listen fd:%d, client fd:%d", raddr.c_str(), fd_, nfd);
     if (new_conn_fn_) {
 	    DLOG_TRACE("new_conn_fn_ call");
         new_conn_fn_(nfd, raddr, sock::sockaddr_in_cast(&ss));

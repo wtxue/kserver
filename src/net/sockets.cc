@@ -57,7 +57,7 @@ out:
     return INVALID_SOCKET;
 }
 
-net_socket_t CreateUDPServer(int port) {
+net_socket_t CreateUDPServer(const std::string& addr) {
     net_socket_t fd = ::socket(AF_INET, SOCK_DGRAM, 0);
     if (fd == -1) {
         int serrno = errno;
@@ -67,11 +67,10 @@ net_socket_t CreateUDPServer(int port) {
     SetReuseAddr(fd);
     SetReusePort(fd);
 
-    std::string addr = std::string("0.0.0.0:") + std::to_string(port);
-    struct sockaddr_storage local = ParseFromIPPort(addr.c_str());
-    if (::bind(fd, (struct sockaddr*)&local, sizeof(struct sockaddr))) {
+    struct sockaddr_storage addr_ss = ParseFromIPPort(addr.c_str());
+    if (::bind(fd, (struct sockaddr*)&addr_ss, sizeof(struct sockaddr))) {
         int serrno = errno;
-        LOG_ERROR("socket bind error:%d %s",serrno,strerror(serrno).c_str());
+        LOG_ERROR("socket bind:%s error:%d %s",addr.c_str(),serrno,strerror(serrno).c_str());
         return INVALID_SOCKET;
     }
 

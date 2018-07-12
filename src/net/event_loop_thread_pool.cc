@@ -4,10 +4,17 @@
 
 namespace net {
 
-EventLoopThreadPool::EventLoopThreadPool(EventLoop* base_loop, uint32_t thread_number)
+EventLoopThreadPool::EventLoopThreadPool(EventLoop* base_loop, uint32_t threadNum)
     : base_loop_(base_loop),
-      thread_num_(thread_number) {
+      thread_num_(threadNum) {
     DLOG_TRACE("create thread_num:%d base_loop:%p",thread_num(),base_loop_);
+}
+
+EventLoopThreadPool::EventLoopThreadPool(EventLoop* base_loop, uint32_t threadNum,const std::string& name)
+	: base_loop_(base_loop),
+	  thread_num_(threadNum) {
+	name_ = name;	  
+	DLOG_TRACE("create thread_num:%d base_loop:%p",thread_num(),base_loop_);
 }
 
 EventLoopThreadPool::~EventLoopThreadPool() {
@@ -20,7 +27,8 @@ bool EventLoopThreadPool::Start(bool wait_thread_started) {
 	/* modify */
     //status_.store(kStarting);
     
-    DLOG_TRACE("thread_num:%d base_loop:%p status_:%d,wait_thread_started:%d",thread_num(),base_loop_,status_.load(),wait_thread_started);
+    DLOG_TRACE("thread_num:%d base_loop:%p status_:%d,wait_thread_started:%d",
+							thread_num(), base_loop_, status_.load(), wait_thread_started);
     if (thread_num_ == 0) {
         status_.store(kRunning);
         return true;
@@ -35,13 +43,13 @@ bool EventLoopThreadPool::Start(bool wait_thread_started) {
     std::shared_ptr<std::atomic<uint32_t>> exited_count(new std::atomic<uint32_t>(0));
     for (uint32_t i = 0; i < thread_num_; ++i) {
         auto prefn = [this, started_count]() {
-            DLOG_TRACE("auto prefn a working thread started tid=%lu",std::this_thread::get_id());
+            DLOG_TRACE("auto prefn a working thread started tid:%lu",std::this_thread::get_id());
             this->OnThreadStarted(started_count->fetch_add(1) + 1);
             return EventLoopThread::kOK;
         };
 
         auto postfn = [this, exited_count]() {
-            DLOG_TRACE("auto postfn a working thread exiting, tid=%lu",std::this_thread::get_id());
+            DLOG_TRACE("auto postfn a working thread exiting, tid:%lu",std::this_thread::get_id());
             this->OnThreadExited(exited_count->fetch_add(1) + 1);
             return EventLoopThread::kOK;
         };
@@ -50,7 +58,7 @@ bool EventLoopThreadPool::Start(bool wait_thread_started) {
 
         // first set thread name
         std::stringstream ss;
-        ss << "ThPool-" << i << "th";
+        ss << GetName() << i << "th";
         t->set_name(ss.str());
         LOG_INFO("EventLoopThread name:%s",t->name().c_str());
         
@@ -186,7 +194,7 @@ void EventLoopThreadPool::OnThreadExited(uint32_t count) {
     DLOG_TRACE("tid:%lu count:%d exited.",std::this_thread::get_id(),count);
     if (count == thread_num_) {
         status_.store(kStopped);
-        DLOG_TRACE("this is the last thread stopped. Thread pool totally exited.");
+        LOG_INFO("this is the last thread stopped. Thread pool totally exited.");
         if (stopped_cb_) {
             stopped_cb_();
             stopped_cb_ = DoneCallback();

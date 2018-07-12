@@ -8,10 +8,10 @@ namespace sync {
 
 // It is not asynchronous, please do not use it production.
 // The only purpose it exists is for purpose of testing UDP Server.
-class Client {
+class UDPClient {
 public:
-    Client();
-    ~Client();
+    UDPClient();
+    ~UDPClient();
 
     bool Connect(const char* host, int port);
     bool Connect(const char* addr/*host:port*/);

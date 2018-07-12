@@ -30,6 +30,9 @@ public:
     // in microseconds cannot be represented by an int64.
     int64_t UnixMicro() const;
 
+	// ms
+	int64_t UnixMs() const;
+
     void Add(Duration d);
 
     bool IsEpoch() const;

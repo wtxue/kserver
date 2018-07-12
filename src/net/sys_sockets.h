@@ -1,17 +1,10 @@
 #pragma once
 
-
-#include "platform_config.h"
-
-
 #include <unistd.h>
 #include <fcntl.h>
 #include <arpa/inet.h>
 #include <sys/uio.h>
 
-#ifndef SOCKET
-#define SOCKET int           /**< SOCKET definition */
-#endif
 #ifndef INVALID_SOCKET
 #define INVALID_SOCKET -1    /**< invalid socket definition */
 #endif
@@ -34,5 +27,4 @@
 
 #define net_socket_t int
 #define signal_number_t net_socket_t
-#define EVPP_EXPORT
 

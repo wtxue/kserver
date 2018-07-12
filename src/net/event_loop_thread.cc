@@ -76,9 +76,9 @@ void EventLoopThread::Stop(bool wait_thread_exit) {
             usleep(1);
         }
 
-        DLOG_TRACE("thread stopped.");
+        LOG_DEBUG("thread stopped.");
         Join();
-        DLOG_TRACE("thread totally stopped.");
+        LOG_DEBUG("thread totally stopped.");
     }
     DLOG_TRACE("leave Stop");
 }
@@ -91,7 +91,7 @@ void EventLoopThread::Join() {
         try {
             thread_->join();
         } catch (const std::system_error& e) {
-            LOG_ERROR("Caught a system_error:%s code=%d",e.what(), e.code());
+            LOG_ERROR("Caught a system_error:%s code:%d",e.what(), e.code());
         }
         thread_.reset();
     }
@@ -104,7 +104,6 @@ void EventLoopThread::set_name(const std::string& n) {
 const std::string& EventLoopThread::name() const {
     return name_;
 }
-
 
 EventLoop* EventLoopThread::loop() const {
     return event_loop_.get();

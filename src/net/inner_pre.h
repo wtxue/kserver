@@ -9,11 +9,15 @@
 #include <functional>
 #endif // end of define __cplusplus
 
-#include "platform_config.h"
+#ifndef H_DEBUG_MODE
+#define H_DEBUG_MODE
+#endif
+
 #include "sys_addrinfo.h"
 #include "sys_sockets.h"
 #include "sockets.h"
 #include "logging.h"
+
 
 struct event;
 namespace net {

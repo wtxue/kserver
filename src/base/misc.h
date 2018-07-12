@@ -2,7 +2,6 @@
 #define __MISC_H__
 
 namespace base {
-namespace misc {
 
 /// @brief 获取当前进程的cpu使用时间
 long long GetCurCpuTime();
@@ -29,9 +28,13 @@ int b2str(const char* buf, const int bufLen, char *str, const int strLen, bool c
 
 bool strIsUpperHex(const char *str, const int strLen);
 
+int string2ll(const char *s, size_t slen, long long *value);
+
+int string2l(const char *s, size_t slen, long *lval);
+
+uint64_t base_mktime(char *stime);
 	
 class TrueRandom {
-    DECLARE_UNCOPYABLE(TrueRandom);
 
 public:
     TrueRandom();
@@ -43,10 +46,72 @@ public:
 
     bool NextBytes(void* buffer, size_t size);
 
+	bool NextBytesBinStr(std::string & binStr, size_t size);
+
 private:
     int32_t m_fd;
 }; // class TrueRandom
 
-} 
+
+#if 0
+//time_interval.h
+#pragma once
+
+#include <iostream>
+#include <memory>
+#include <string>
+#ifdef GCC
+#include <sys/time.h>
+#else
+#include <ctime>
+#endif // GCC
+
+class TimeInterval
+{
+public:
+    TimeInterval(const std::string& d) : detail(d)
+    {
+        init();
+    }
+
+    TimeInterval()
+    {
+        init();
+    }
+
+    ~TimeInterval()
+    {
+#ifdef GCC
+        gettimeofday(&end, NULL);
+        std::cout << detail 
+            << 1000 * (end.tv_sec - start.tv_sec) + (end.tv_usec - start.tv_usec) / 1000 
+            << " ms" << endl;
+#else
+        end = clock();
+        std::cout << detail 
+            << (double)(end - start) << " ms" << std::endl;
+#endif // GCC
+    }
+
+protected:
+    void init() {
+#ifdef GCC
+        gettimeofday(&start, NULL);
+#else
+        start = clock();
+#endif // GCC
+    }
+private:
+    std::string detail;
+#ifdef GCC
+    timeval start, end;
+#else
+    clock_t start, end;
+#endif // GCC
+};
+
+#define TIME_INTERVAL_SCOPE(d)   std::shared_ptr<TimeInterval> time_interval_scope_begin = std::make_shared<TimeInterval>(d)
+#endif
 }
+
 #endif

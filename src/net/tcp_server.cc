@@ -12,32 +12,35 @@ TCPServer::TCPServer(EventLoop* loop,
     : loop_(loop)
     , listen_addr_(laddr)
     , name_(name)
+    , create_tpool_myself_(true)
     , conn_fn_(&internal::DefaultConnectionCallback)
     , msg_fn_(&internal::DefaultMessageCallback)
     , next_conn_id_(0) {
-    DLOG_TRACE("name=%s listening addr:%s thread_num=%d",name.c_str(), laddr.c_str(), thread_num);
+    DLOG_TRACE("name:%s listening addr:%s thread_num:%d",name.c_str(), laddr.c_str(), thread_num);
     tpool_.reset(new EventLoopThreadPool(loop_, thread_num));
 }
 
 TCPServer::TCPServer(EventLoop* loop,	  
 					const std::string& laddr, 
 					const std::string& name, 
-					const std::shared_ptr<EventLoopThreadPool>& tpool)
-		: loop_(loop)
-		, listen_addr_(laddr)
-		, name_(name)
-		, tpool_(tpool) 
-		, conn_fn_(&internal::DefaultConnectionCallback)
-		, msg_fn_(&internal::DefaultMessageCallback)
-		, next_conn_id_(0) {
-	DLOG_TRACE("name=%s laddr:%s tpool=%p",name.c_str(), laddr.c_str(), tpool.get());
+					const net::EventLoopThreadPoolPtr& tpool)
+	: loop_(loop)
+	, listen_addr_(laddr)
+	, name_(name)
+	, tpool_(tpool) 
+	, create_tpool_myself_(false)
+	, conn_fn_(&internal::DefaultConnectionCallback)
+	, msg_fn_(&internal::DefaultMessageCallback)
+	, next_conn_id_(0) {
+	DLOG_TRACE("name:%s listening addr:%s thread_num:%d tpool:%p",name.c_str(), laddr.c_str(),tpool->thread_num(), tpool.get());
 }
 
 TCPServer::~TCPServer() {
 	DLOG_TRACE("destroy TCPServer");
     assert(connections_.empty());
     assert(!listener_);
-    if (tpool_) {
+    if (tpool_ && create_tpool_myself_) {    	
+		DLOG_TRACE("reset tpool_");
         assert(tpool_->IsStopped());
         tpool_.reset();
     }
@@ -116,7 +119,8 @@ void TCPServer::StopInLoop(DoneCallback on_stopped_cb) {
                 DLOG_TRACE("close connection id=%lu fd=%d",c.second->id(),c.second->fd());
                 c.second->Close();
             } else {
-                DLOG_TRACE("Do not need to call Close for this TCPConn it may be doing disconnecting. TCPConn=%d fd=%d status=%s",c.second.get(),c.second->fd(),StatusToString().c_str());
+                DLOG_TRACE("Do not need to call Close for this TCPConn it may be doing disconnecting. TCPConn:%d fd:%d status:%s",
+                					c.second.get(),c.second->fd(),StatusToString().c_str());
             }
         }
 
@@ -125,13 +129,19 @@ void TCPServer::StopInLoop(DoneCallback on_stopped_cb) {
         // The working threads will be stopped after all the connections closed.
     }
 
-    DLOG_TRACE("exited, status=%s" ,StatusToString().c_str());
+    DLOG_TRACE("exited, status:%s",StatusToString().c_str());
 }
 
 void TCPServer::StopThreadPool() {
-    DLOG_TRACE("pool=%p",tpool_.get());
+    DLOG_TRACE("StopThreadPool pool:%p",tpool_.get());
     assert(loop_->IsInLoopThread());
     assert(IsStopping());
+
+    if (!create_tpool_myself_) {
+    	DLOG_TRACE("not create myself,no need stop");
+    	return ;
+    }
+    
     substatus_.store(kStoppingThreadPool);
     tpool_->Stop(true);
     assert(tpool_->IsStopped());
@@ -144,10 +154,10 @@ void TCPServer::StopThreadPool() {
 }
 
 void TCPServer::HandleNewConn(net_socket_t sockfd,     const std::string& remote_addr,const struct sockaddr_in* raddr) {
-    DLOG_TRACE("fd=%d",sockfd);
+    DLOG_TRACE("fd:%d",sockfd);
     assert(loop_->IsInLoopThread());
     if (IsStopping()) {
-        LOG_WARN("this=%p The server is at stopping status. Discard this socket fd=%d remote_addr=%s",this, sockfd, remote_addr.c_str());
+        LOG_WARN("this:%p The server is at stopping status. Discard this socket fd:%d remote_addr:%s",this, sockfd, remote_addr.c_str());
         EVUTIL_CLOSESOCKET(sockfd);
         return;
     }
@@ -160,14 +170,14 @@ void TCPServer::HandleNewConn(net_socket_t sockfd,     const std::string& remote
     std::string n = remote_addr;
 #endif
     ++next_conn_id_;    
-    DLOG_TRACE("fd=%d name:%s",sockfd,n.c_str());
+    LOG_DEBUG("fd:%d name:%s",sockfd,n.c_str());
     TCPConnPtr conn(new TCPConn(io_loop, n, sockfd, listen_addr_, remote_addr, next_conn_id_));
     assert(conn->type() == TCPConn::kIncoming);
     conn->SetMessageCallback(msg_fn_);
     conn->SetConnectionCallback(conn_fn_);
     conn->SetCloseCallback(std::bind(&TCPServer::RemoveConnection, this, std::placeholders::_1));
     io_loop->RunInLoop(std::bind(&TCPConn::OnAttachedToLoop, conn));    
-    DLOG_TRACE("new conn:%p %d id:%d",conn.get(),conn.use_count(),conn->id());    
+    LOG_DEBUG("new conn:%p use_count:%d id:%d",conn.get(),conn.use_count(),conn->id());    
     connections_[conn->id()] = conn;
 }
 
@@ -183,13 +193,13 @@ void TCPServer::RemoveConnection(const TCPConnPtr& conn) {
     DLOG_TRACE("conn use_count:%d fd:%d connections:%d",conn.use_count(),conn->fd(),connections_.size());
     auto f = [this, conn]() {
         // Remove the connection in the listening EventLoop
-		DLOG_TRACE("conn use_count:%d fd:%d",conn.use_count(),conn->fd());
+		LOG_DEBUG("conn use_count:%d fd:%d",conn.use_count(),conn->fd());
         assert(this->loop_->IsInLoopThread());
         this->connections_.erase(conn->id());
-		DLOG_TRACE("conn use_count:%d",conn.use_count());
+		LOG_DEBUG("conn use_count:%d",conn.use_count());
         if (IsStopping() && this->connections_.empty()) {
             // At last, we stop all the working threads
-            DLOG_TRACE("stop thread pool");
+            LOG_DEBUG("stop thread pool");
             assert(substatus_.load() == kStoppingListener);
             StopThreadPool();
             if (stopped_cb_) {

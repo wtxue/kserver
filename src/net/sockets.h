@@ -14,7 +14,7 @@ std::string strerror(int e);
 namespace sock {
 
 net_socket_t CreateNonblockingSocket();
-net_socket_t CreateUDPServer(int port);
+net_socket_t CreateUDPServer(const std::string& addr);
 void SetKeepAlive(net_socket_t fd, bool on);
 void SetReuseAddr(net_socket_t fd);
 void SetReusePort(net_socket_t fd);

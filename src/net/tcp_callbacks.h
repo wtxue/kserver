@@ -1,12 +1,18 @@
 #pragma once
 
 #include "net/inner_pre.h"
+#include "net/udp_server.h"
 
 namespace net {
 class Buffer;
 class TCPConn;
+class TCPServer;
+class UDPServer;
 
+typedef std::shared_ptr<TCPServer> TCPServerPtr;
 typedef std::shared_ptr<TCPConn> TCPConnPtr;
+typedef std::shared_ptr<UDPServer> UDPServerPtr;
+
 typedef std::function<void()> TimerCallback;
 
 // When a connection established, broken down, connecting failed, this callback will be called

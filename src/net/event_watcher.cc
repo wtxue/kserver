@@ -21,7 +21,7 @@ EventWatcher::EventWatcher(struct event_base* evbase, Handler&& handler)
     : evbase_(evbase), attached_(false), handler_(std::move(handler)) {
     event_ = new event;
     memset(event_, 0, sizeof(struct event));    
-	DLOG_TRACE("create event watch:%p Handler",event_);
+	DLOG_TRACE("create event watch:%p Handler std::move",event_);
 }
 
 EventWatcher::~EventWatcher() {
@@ -53,6 +53,7 @@ bool EventWatcher::Watch(Duration timeout) {
     struct timeval* timeoutval = nullptr;
 
     if (timeout.Nanoseconds() > 0) {
+    	DLOG_TRACE("timeout.Seconds:%fs",timeout.Seconds());
         timeout.To(&tv);
         timeoutval = &tv;
     }
@@ -72,7 +73,7 @@ bool EventWatcher::Watch(Duration timeout) {
     assert(!attached_);
     DLOG_TRACE("EventWatcher Watch EventAdd event_:%p ev_fd:%d",event_,event_->ev_fd);
     if (EventAdd(event_, timeoutval) != 0) {
-        LOG_ERROR("event_add failed. fd=%d",this->event_->ev_fd);
+        LOG_ERROR("event_add failed. fd:%d",this->event_->ev_fd);
         return false;
     }
     attached_ = true;
@@ -129,7 +130,7 @@ bool PipeEventWatcher::DoInit() {
 
     if (evutil_socketpair(AF_UNIX, SOCK_STREAM, 0, pipe_) < 0) {
         int err = errno;
-        LOG_ERROR("create socketpair ERROR errno=%d %s",err,strerror(err).c_str());
+        LOG_ERROR("create socketpair ERROR errno:%d %s",err,strerror(err).c_str());
         goto failed;
     }
 
@@ -155,7 +156,7 @@ void PipeEventWatcher::DoClose() {
 }
 
 void PipeEventWatcher::HandlerFn(net_socket_t fd, short /*which*/, void* v) {
-    LOG_INFO("PipeEventWatcher::HandlerFn fd=%d",fd);
+    LOG_TRACE("PipeEventWatcher::HandlerFn fd:%d",fd);
     PipeEventWatcher* e = (PipeEventWatcher*)v;
 #ifdef H_BENCHMARK_TESTING
     // Every time we only read 1 byte for testing the IO event performance.

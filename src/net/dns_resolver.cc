@@ -138,10 +138,10 @@ void DNSResolver::OnResolved(int errcode, struct addrinfo* addr) {
             ClearTimer();
             LOG_ERROR("DNS resolve failed, error code:%d error msg:%s",errcode,evutil_gai_strerror(errcode));
         } else {
-            DLOG_WARN("DNS resolve cancel, may be timeout");
+            LOG_WARN("DNS resolve cancel, may be timeout");
         }
 
-        DLOG_WARN("delete DNS base. errcode=%d %s",errcode,strerror(errcode).c_str());
+        LOG_TRACE("delete DNS base. errcode=%d %s",errcode,strerror(errcode).c_str());
         evdns_base_free(dnsbase_, 0);
         dnsbase_ = nullptr;
         OnResolved();
