@@ -1,0 +1,141 @@
+{
+    "structs": 
+    [
+        {
+            "type": "RPCMethod_t",
+            "members": 
+            [
+                ["string", "RPCMethod"],
+                ["string", "Vendor"],
+                ["string", "Model"],
+                ["string", "FirmwareVer"],
+                ["string", "HardwareVer"],
+                ["string", "MAC"],
+                ["string", "IPAddr"],
+                ["string", "PlatformID"],
+                ["string", "CheckSN"]
+            ]
+        },
+        {
+            "type": "ResultAck_t",
+            "members": 
+            [
+                ["int32_t", "Result"],
+                ["string", "Ack"]
+            ]
+        },
+        {
+            "type": "BootFirstAck_t",
+            "members": 
+            [
+                ["int32_t", "Result"],
+                ["string", "ChallengeCode"],
+                ["int32_t", "Interval"],
+                ["string", "ServerIP"]
+            ]
+        },
+        {
+            "type": "RegisterFirstAck_t",
+            "members": 
+            [
+                ["int32_t", "Result"],
+                ["string", "ServerAddr"],
+                ["int32_t", "Interval"],
+                ["int32_t", "ServerPort"],
+                ["string", "ServerIP"]
+            ]
+        },
+        {
+            "type": "DevMap_t",
+            "members": 
+            [
+                ["string", "MAC"],
+                ["string", "Vendor"],
+                ["string", "Model"],
+                ["string", "FirmwareVer"],
+                ["string", "HardwareVer"],
+                ["string", "IPAddr"],
+                ["string", "PlatformID"],                
+                ["string", "remote"],
+                ["string", "rnd"],                
+                ["uint64_t", "last_time"],
+                ["uint64_t", "recv_pkts"],
+
+                ["string", "sn"],
+                ["string", "ssn"],
+                ["string", "ssid1"],
+                ["string", "ssid1pass"],
+                ["string", "adminpass"],
+                ["uint64_t", "dev_id"],
+                ["uint64_t", "plan_id"]
+            ]
+        },
+        {
+            "type": "DevConfig_t",
+            "members": 
+            [
+                ["string", "MAC"],
+                ["int32_t", "platcode"]
+            ]
+        },
+        {
+            "type": "NetcoreConfig_t",
+            "members": 
+            [
+                ["string", "param_name"],
+                ["string", "param_value"],
+                ["uint64_t", "param_time"]
+            ]
+        },
+        {
+            "type": "OpSvcAddr_t",
+            "members": 
+            [
+                ["int32_t", "svr_addr_id"],
+                ["int32_t", "svr_provides_id"],
+                ["string", "svr_addr"],
+                ["int32_t", "svr_port"]
+            ]
+        },
+        {
+            "type": "PlatIdPer_t",
+            "members": 
+            [
+                ["uint64_t", "ID"],
+                ["int32_t", "per"]
+            ]
+        },
+        {
+            "type": "DispatcherVip_t",
+            "members": 
+            [
+                ["string", "mac"],
+                ["uint64_t", "addtime"],
+                ["string", "info"],
+                ["int32_t", "loglev"]                
+            ]
+        },
+        {
+            "type": "DispatcherLog_t",
+            "members": 
+            [
+                ["string","idnum"],
+                ["int32_t", "direction"],
+                ["int32_t", "step"],
+                ["int32_t", "result"],
+                ["string", "mac"],
+                ["string", "action"],
+                ["string", "hostip"],
+                ["uint64_t", "begintime"],  
+                ["uint64_t", "begintime_ms"],   
+                ["uint64_t", "addtime"],   
+                ["uint64_t", "addtime_ms"], 
+                                
+                ["uint64_t", "costtime"], 
+                ["string", "indata"], 
+                ["string", "outdata"], 
+                ["string", "userip"]
+            ]
+        }
+    ]
+}

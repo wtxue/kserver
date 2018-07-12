@@ -1,0 +1,3 @@
+[INFO][2018-07-11 15:42:31.801545][dispatcher][net/inner_pre.cc-17-OnStartup]: ignore SIGPIPE
+[INFO][2018-07-11 15:42:31.802601][dispatcher][main.cc-112-main]: sqdbInit Start first /////////
+[DB_TRAC][2018-07-11 15:42:31.802654][dispatcher][db_base.cc-525-Init]: name:default

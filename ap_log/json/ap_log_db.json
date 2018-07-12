@@ -1,0 +1,101 @@
+{
+    "structs": 
+    [
+        {
+            "type": "cs_name_t",
+            "members": 
+            [
+                ["string", "Name"]
+            ]
+        },
+        {
+            "type": "index_create_t",
+            "members": 
+            [
+                ["string", "indexDef"],
+                ["string", "pIndexName"],
+                ["int32_t", "isUnique", 0],
+                ["int32_t", "isEnforced", 0]
+            ]
+        },
+        {
+            "type": "index_param_time_t",
+            "members": 
+            [
+                ["string", "index_name", "index_param_time"],
+                ["int32_t", "param_time", 1]
+            ]
+        },
+        {
+            "type": "index_mac_t",
+            "members": 
+            [
+                ["string", "index_name", "mac"],
+                ["int32_t", "mac", 1]
+            ]
+        },
+        {
+            "type": "index_ID_t",
+            "members": 
+            [
+                ["string", "index_name", "index_ID"],
+                ["int32_t", "ID", 1]
+            ]
+        },
+        {
+            "type": "index_addtime_t",
+            "members": 
+            [
+                ["string", "index_name", "index_addtime"],
+                ["int32_t", "addtime", 1]
+            ]
+        },
+        {
+            "type": "index_mac_RPCMethod_t",
+            "members": 
+            [
+                ["string", "index_name", "index_mac"],
+                ["int32_t", "mac", 1],
+                ["int32_t", "RPCMethod", 1]
+            ]
+        },
+        {
+            "type": "ap_log_config_t",
+            "members": 
+            [
+                ["string", "param_name"],
+                ["uint64_t", "param_time"],
+                ["uint64_t", "param_value"]
+            ]
+        },
+        {
+            "type": "ap_log_qos_vip_t",
+            "members": 
+            [
+                ["string", "mac"],
+                ["uint64_t", "addtime"],
+                ["string", "info"],
+                ["int32_t", "loglev"]                
+            ]
+        },    
+        {
+            "type": "ap_log_dev_t",
+            "members": 
+            [
+                ["string", "RPCMethod"],
+                ["string", "ID"],
+                ["string", "mac"],
+                ["string", "server"],
+                ["string", "remote"],
+                ["string", "start_time"],
+                ["string", "end_time"],
+                ["string", "client_ip"],
+                ["int32_t", "direction"],
+                ["int32_t", "Result"],
+                ["uint64_t", "addtime"],
+                ["string", "in"],
+                ["string", "out"]
+            ]
+        }
+    ]
+}
