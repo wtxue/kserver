@@ -8,6 +8,7 @@
 #include "buffer.h"
 #include "tcp_conn.h"
 #include "timestamp.h"
+#include "random.h"
 #include "misc.h"
 #include "md5.h"
 #include "manager.h"
@@ -31,64 +32,69 @@ CDevModel* CDevModel::m_pIns = NULL;
 static bool DevSnMd5Check(const string& CheckSN, const DevHashMapPtr& dev) {
 	MD5 md5_;
 	string md5_string;
+	string ssid1Last4Char;
 
 	md5_.update(dev->rnd.c_str(), dev->rnd.length());
 	md5_.update(dev->sn.c_str(), dev->sn.length());
 	md5_.finalize();
 	md5_string = md5_.hexdigest();
-	LOG_TRACE("sn md5_string:%s",md5_string.c_str());
+	APP_TRACE("sn md5_string:%s",md5_string.c_str());
 	if (!strcasecmp(md5_string.c_str(),CheckSN.c_str())) {
-		LOG_TRACE("sn md5 verify ok",md5_string.c_str());
+		APP_TRACE("sn md5 verify ok",md5_string.c_str());
 		return true;
 	}
 
-	LOG_DEBUG("CheckSN:%s,md5:%s,rnd:%s,sn:%s",CheckSN.c_str(),md5_string.c_str(),dev->rnd.c_str(),dev->sn.c_str());
-	md5_.init();
-	md5_.update(dev->rnd.c_str(), dev->rnd.length());
-	md5_.update(dev->ssn.c_str(), dev->ssn.length());
-	md5_.finalize();
-	md5_string = md5_.hexdigest();
-	LOG_TRACE("ssn md5_string:%s",md5_string.c_str());
-	if (!strcasecmp(md5_string.c_str(),CheckSN.c_str())) {
-		LOG_TRACE("ssn md5 verify ok");
-		return true;
-	}
-
-	LOG_DEBUG("CheckSN:%s,md5:%s,rnd:%s,ssn:%s",CheckSN.c_str(),md5_string.c_str(),dev->rnd.c_str(),dev->ssn.c_str());
-	if (dev->ssid1.length() >= 4) {
+	if (dev->ssid1.length() > 4) {
+		ssid1Last4Char = dev->ssid1.substr(dev->ssid1.length() - 4);		
+		APP_TRACE("rnd:%s,sn:%s,ssid1Last4Char:%s,ssid1pass:%s,adminpass:%s",dev->rnd.c_str(),dev->sn.c_str(),ssid1Last4Char.c_str(),dev->ssid1pass.c_str(),dev->adminpass.c_str());
 		md5_.init();
 		md5_.update(dev->rnd.c_str(), dev->rnd.length());
 		md5_.update(dev->sn.c_str(), dev->sn.length());
-		md5_.update(dev->ssid1.c_str(), dev->ssid1.length());
+		md5_.update(ssid1Last4Char.c_str(), ssid1Last4Char.length());
 		md5_.update(dev->ssid1pass.c_str(), dev->ssid1pass.length());
 		md5_.update(dev->adminpass.c_str(), dev->adminpass.length());
 		md5_.finalize();
 		md5_string = md5_.hexdigest();
-		LOG_TRACE("sn ssid1 ssid1pass adminpass md5_string:%s",md5_string.c_str());
+		APP_TRACE("sn ssid1 ssid1pass adminpass, sn:%s md5_string:%s",dev->sn.c_str(),md5_string.c_str());
 		if (!strcasecmp(md5_string.c_str(),CheckSN.c_str())) {
-			LOG_TRACE("sn ssid1 ssid1pass adminpass md5 verify ok");
+			APP_TRACE("sn ssid1 ssid1pass adminpass md5 verify ok MAC:%s",dev->MAC.c_str());
 			return true;
 		}
-
-		LOG_DEBUG("sn:%s,ssid1:%s,ssid1pass:%s,adminpass:%s",
-				dev->sn.c_str(),dev->ssid1.c_str(),dev->ssid1pass.c_str(),dev->adminpass.c_str());
+	}
+	
+	if (dev->ssn.length() > 0) {
 		md5_.init();
 		md5_.update(dev->rnd.c_str(), dev->rnd.length());
 		md5_.update(dev->ssn.c_str(), dev->ssn.length());
-		md5_.update(dev->ssid1.c_str(), dev->ssid1.length());
-		md5_.update(dev->ssid1pass.c_str(), dev->ssid1pass.length());
-		md5_.update(dev->adminpass.c_str(), dev->adminpass.length());
 		md5_.finalize();
 		md5_string = md5_.hexdigest();
-		LOG_TRACE("ssn ssid1 ssid1pass adminpass md5_string:%s",md5_string.c_str());
+		APP_TRACE("ssn:%s md5_string:%s",dev->sn.c_str(),md5_string.c_str());
 		if (!strcasecmp(md5_string.c_str(),CheckSN.c_str())) {
-			LOG_TRACE("ssn ssid1 ssid1pass adminpass md5 verify ok");
+			APP_TRACE("ssn md5 verify ok MAC:%s",dev->MAC.c_str());
 			return true;
 		}
-		LOG_DEBUG("ssn:%s,ssid1:%s,ssid1pass:%s,adminpass:%s",
-				dev->ssn.c_str(),dev->ssid1.c_str(),dev->ssid1pass.c_str(),dev->adminpass.c_str());
+
+		APP_TRACE("CheckSN:%s,md5:%s,rnd:%s,ssn:%s",CheckSN.c_str(),md5_string.c_str(),dev->rnd.c_str(),dev->ssn.c_str());
+		if (dev->ssid1.length() > 4 && ssid1Last4Char.length() > 0) {
+			md5_.init();
+			md5_.update(dev->rnd.c_str(), dev->rnd.length());
+			md5_.update(dev->ssn.c_str(), dev->ssn.length());
+			md5_.update(ssid1Last4Char.c_str(), ssid1Last4Char.length());
+			md5_.update(dev->ssid1pass.c_str(), dev->ssid1pass.length());
+			md5_.update(dev->adminpass.c_str(), dev->adminpass.length());
+			md5_.finalize();
+			md5_string = md5_.hexdigest();
+			APP_TRACE("ssn ssid1 ssid1pass adminpass, ssn:%s md5_string:%s",dev->ssn.c_str(),md5_string.c_str());
+			if (!strcasecmp(md5_string.c_str(),CheckSN.c_str())) {
+				APP_TRACE("ssn ssid1 ssid1pass adminpass md5 verify ok MAC:%s",dev->MAC.c_str());
+				return true;
+			}
+		}
 	}
 
+	APP_DEBUG("CheckSN:%s,md5:%s,MAC:%s,rnd:%s,sn:%s,ssn:%s,ssid1:%s,ssid1pass:%s,adminpass:%s",
+			CheckSN.c_str(),md5_string.c_str(),dev->MAC.c_str(),dev->rnd.c_str(),
+			dev->sn.c_str(),dev->ssn.c_str(),dev->ssid1.c_str(),dev->ssid1pass.c_str(),dev->adminpass.c_str());
 	return false;
 }
 
@@ -101,7 +107,7 @@ static int create_id_num(string &idnum, int len) {
 	base::TrueRandom Random;
 	
 	if (len < DEV_LOGID_SIZE){
-		LOG_ERROR("len too small!!(len = %d)\n", len);
+		APP_ERROR("len too small!!(len = %d)\n", len);
 		return -1;
 	}
 
@@ -127,16 +133,15 @@ CDevModel* CDevModel::getIns() {
 
 int32_t CDevModel::GetFindMacVip(const string& mac) { 
 	std::lock_guard<std::mutex> lock(MacVipMutex_);
-	if (!mac.size()) {
+	if (!mac.size() || !macVip_.size()) {
 		return config_deviceLogStatus_;
 	}
 	
 	auto it = macVip_.find(mac);
 	if (it == macVip_.end()) {
-		LOG_TRACE("not find mac:%s,flag:%d",mac.c_str(),config_deviceLogStatus_);
 		return config_deviceLogStatus_;
 	} else {
-		LOG_TRACE("find mac:%s,flag:%d",mac.c_str(),it->second.loglev);
+		APP_TRACE("find mac:%s,loglev:%d",mac.c_str(),it->second.loglev);
 		return it->second.loglev;
 	}
 }
@@ -153,23 +158,24 @@ uint64_t CDevModel::GetPlatcodebyMacdev(const string& mac) {
 }
 
 uint64_t CDevModel::GetIdPerByWeight() { 
-	std::lock_guard<std::mutex> lock(IdPerMutex_);
 	int sum_weight = 0;
 	uint64_t plat_id = 0;
 	int sum_percent = 0;
 	int r;	
 	base::TrueRandom Random;
 	size_t i;
+	std::lock_guard<std::mutex> lock(IdPerMutex_);
 	
-	sum_weight = IdPer_.size();
-	if (sum_weight <= 0) {
+	if (all_per_ <= 0) {
 		return 0;
 	}
 
+	sum_weight = all_per_;
 	r = Random.NextUInt32()%sum_weight;
 	sum_percent = 0;
-	LOG_DEBUG("rnd:%d",r);
+	APP_TRACE("rnd:%d sum_weight:%d",r,sum_weight);
 	for (i = 0; i < IdPer_.size(); i++) {
+		APP_TRACE("idx:%d ID:%u per:%d sum_weight:%d",i,IdPer_[i].ID,IdPer_[i].per,sum_percent);
 		if (r < (IdPer_[i].per + sum_percent)) {
 			plat_id = IdPer_[i].ID;
 			break;
@@ -178,10 +184,10 @@ uint64_t CDevModel::GetIdPerByWeight() {
 	}
 
 	if (plat_id == 0) {
-		LOG_ERROR("no such plat_id");
+		APP_TRACE("no such plat_id");
 	}
 
-	LOG_DEBUG("plat_id:%u",plat_id);
+	APP_TRACE("plat_id:%u",plat_id);
 	return plat_id;
 }
 
@@ -214,17 +220,17 @@ bool CDevModel::GetOpSvcAddrByOther(OpSvcAddr_t& addr) {
 void CDevModel::GetOpSvcAddrTimer() {
 	std::vector<OpSvcAddr_t> objs;
 	if (!getOpSvcAddr(objs)) {
-		LOG_ERROR("getOpSvcAddr failed");
+		APP_ERROR("getOpSvcAddr failed");
 		return ;
 	}
 
 	std::lock_guard<std::mutex> lock(OpSvcAddrMutex_);
 	providesId_.clear();
 	for (size_t j = 0; j < objs.size(); j++) {
-		LOG_DEBUG("svr_provides_id:%d svr_addr:%s svr_port:%d",objs[j].svr_provides_id,objs[j].svr_addr.c_str(),objs[j].svr_port);
+		APP_TRACE("svr_provides_id:%d svr_addr:%s svr_port:%d",objs[j].svr_provides_id,objs[j].svr_addr.c_str(),objs[j].svr_port);
 		providesId_[objs[j].svr_provides_id] = objs[j];
 	}	
-	LOG_DEBUG("after providesId_.size:%d",providesId_.size());
+	APP_TRACE("after providesId_.size:%d",providesId_.size());
 }
 
 void CDevModel::GetNetcoreConfigTimer() {
@@ -265,7 +271,7 @@ void CDevModel::GetNetcoreConfigTimer() {
 		if (objs[i].param_name == "deviceLogStatus") {	
 			string2l(objs[i].param_value.c_str(), objs[i].param_value.size(), &DeviceLogStatus_tmp);
 			if (config_deviceLogStatus_ != DeviceLogStatus_tmp) {
-				//LOG_DEBUG("DeviceLogStatus_tmp:%u",DeviceLogStatus_tmp);  
+				//APP_DEBUG("DeviceLogStatus_tmp:%u",DeviceLogStatus_tmp);  
 				isNeedUpdateDeviceLogStatus = 1;
 			}
 		}
@@ -281,16 +287,18 @@ void CDevModel::GetNetcoreConfigTimer() {
 	if (isNeedUpdatePlatConfig) {
 		std::vector<slothjson::PlatIdPer_t> perArr;
 		if (!slothjson::decode(plat_id_tmp, perArr)) {
-			LOG_ERROR("decode id per arr failed");
+			APP_ERROR("decode id per arr failed");
 		}
 		else {
-			LOG_DEBUG("config_PlatConfig_time_ change to:%u",config_PlatConfig_time_tmp);
+			APP_DEBUG("config_PlatConfig_time_ change to:%u",config_PlatConfig_time_tmp);
 			std::lock_guard<std::mutex> lock1(IdPerMutex_);		
 			config_PlatConfig_time_ = config_PlatConfig_time_tmp; 	
 			IdPer_.clear();
+			all_per_ = 0;
 			for (i = 0; i < perArr.size(); i++) {
-				LOG_DEBUG("k:%d ID:%u per:%d",i,perArr[i].ID,perArr[i].per);
 				IdPer_.push_back(perArr[i]);
+				all_per_ += perArr[i].per;
+				APP_DEBUG("k:%d ID:%u per:%d,all_per_:%d",i,perArr[i].ID,perArr[i].per,all_per_);
 			}
 		}
 	}
@@ -298,15 +306,15 @@ void CDevModel::GetNetcoreConfigTimer() {
 	if (isNeedUpdateMac) {
 		std::vector<DevConfig_t> dev_objs;
 		if (!getNetcoreDisbymac(dev_objs)) {
-			LOG_ERROR("getNetcoreDisbymac failed");
+			APP_ERROR("getNetcoreDisbymac failed");
 		}
 		else {
-			LOG_DEBUG("config_DevConfig_time_ change to:%u",config_DevConfig_time_tmp);
+			APP_DEBUG("config_DevConfig_time_ change to:%u",config_DevConfig_time_tmp);
 			std::lock_guard<std::mutex> lock2(DevConfigMutex_);
 			config_DevConfig_time_ = config_DevConfig_time_tmp; 			
 			DevConfig_.clear();
 			for (i = 0; i < dev_objs.size(); i++) {
-				LOG_DEBUG("i:%d MAC:%s platcode:%d",i,dev_objs[i].MAC.c_str(),dev_objs[i].platcode);
+				APP_DEBUG("i:%d MAC:%s platcode:%d",i,dev_objs[i].MAC.c_str(),dev_objs[i].platcode);
 				DevConfig_[dev_objs[i].MAC] = dev_objs[i].platcode;
 			}
 		}
@@ -314,25 +322,25 @@ void CDevModel::GetNetcoreConfigTimer() {
 
 	if (isNeedUpdateDeviceLogStatus) {
 		std::lock_guard<std::mutex> lock3(MacVipMutex_);
-		LOG_DEBUG("deviceLogStatus change to:%u",DeviceLogStatus_tmp);
+		APP_DEBUG("deviceLogStatus change to:%u",DeviceLogStatus_tmp);
 		config_deviceLogStatus_ = DeviceLogStatus_tmp;
 	}
 
 	if (isNeedUpdateQosVersion) {
 		std::vector<DispatcherVip_t> vip_objs;
 		if (!getMacQosConfig(vip_objs)) {
-			LOG_ERROR("getNetcoreDisbymac failed");
+			APP_ERROR("getNetcoreDisbymac failed");
 		}
 		else {
 			std::lock_guard<std::mutex> lock3(MacVipMutex_);
-			LOG_DEBUG("qos_wl_time change to:%u",qos_wl_time_tmp);
+			APP_DEBUG("qos_wl_time change to:%u",qos_wl_time_tmp);
 			config_qos_wl_time_ = qos_wl_time_tmp;
 			macVip_.clear();
 			for (i = 0; i < vip_objs.size(); i++) {
-				LOG_DEBUG("i:%d mac:%s loglev:%d",i,vip_objs[i].mac.c_str(),vip_objs[i].loglev);
+				APP_DEBUG("i:%d mac:%s loglev:%d",i,vip_objs[i].mac.c_str(),vip_objs[i].loglev);
 				macVip_.insert(make_pair(vip_objs[i].mac, vip_objs[i]));
 			}			
-			LOG_DEBUG("after macVip_.size:%d",macVip_.size());
+			APP_DEBUG("after macVip_.size:%d",macVip_.size());
 		}
 	}
 }
@@ -342,7 +350,7 @@ bool CDevModel::getNetcoreDisbymac(std::vector<DevConfig_t> &conf) {
 	CDBManager* pDBManager = CDBManager::getIns();
 	CDBConn* pConn = pDBManager->GetDBConn();
 	if (!pConn) {
-		LOG_ERROR("get conn err"); 
+		APP_ERROR("get conn err"); 
 		return bRet;
 	}	
 	
@@ -368,7 +376,7 @@ bool CDevModel::getNetcoreConfig(std::vector<NetcoreConfig_t> &conf) {
 	CDBManager* pDBManager = CDBManager::getIns();
 	CDBConn* pConn = pDBManager->GetDBConn();
 	if (!pConn) {
-		LOG_ERROR("get conn err"); 
+		APP_ERROR("get conn err"); 
 		return bRet;
 	}	
 	
@@ -395,7 +403,7 @@ bool CDevModel::getMacQosConfig(std::vector<DispatcherVip_t> &conf) {
 	CDBManager* pDBManager = CDBManager::getIns();
 	CDBConn* pConn = pDBManager->GetDBConn();
 	if (!pConn) {
-		LOG_ERROR("get conn err"); 
+		APP_ERROR("get conn err"); 
 		return bRet;
 	}	
 	
@@ -424,7 +432,7 @@ bool CDevModel::getOpSvcAddr(std::vector<OpSvcAddr_t> &conf) {
 	CDBManager* pDBManager = CDBManager::getIns();
 	CDBConn* pConn = pDBManager->GetDBConn();
 	if (!pConn) {
-		LOG_ERROR("get conn err"); 
+		APP_ERROR("get conn err"); 
 		return bRet;
 	}	
 	
@@ -453,13 +461,13 @@ bool CDevModel::getDevSn(const DevHashMapPtr &dev) {
 	CDBManager* pDBManager = CDBManager::getIns();
 	CDBConn* pConn = pDBManager->GetDBConn();
 	if (!pConn) {
-		LOG_ERROR("get conn err"); 
+		APP_ERROR("get conn err"); 
 		return bRet;
 	}	
 
 	string strSql;	  
-	//strSql = "select DEVICE_SN,DEF_SSIDNAME,DEF_SSIDPASS,ADMIN_PASS,DEVICE_SSN,DEVICE_INST_ID,svc_providers_id from gateway_device_inst where MAC_ADDRESS="
-	strSql = "select * from gateway_device_inst where MAC_ADDRESS=";
+	strSql = "select DEVICE_SN,DEF_SSIDNAME,DEF_SSIDPASS,ADMIN_PASS,DEVICE_SSN,DEVICE_INST_ID,svc_providers_id from gateway_device_inst where MAC_ADDRESS=";
+	//strSql = "select * from gateway_device_inst where MAC_ADDRESS=";
 	strSql += "'" + dev->MAC + "'";
 	
 	CResultSetPtr resSet = pConn->ExecuteQuery(strSql);
@@ -469,15 +477,13 @@ bool CDevModel::getDevSn(const DevHashMapPtr &dev) {
 			resSet->GetString("DEF_SSIDNAME",dev->ssid1);			
 			resSet->GetString("DEF_SSIDPASS",dev->ssid1pass);			
 			resSet->GetString("ADMIN_PASS",dev->adminpass);			
-			resSet->GetString("DEVICE_SSN",dev->ssn);			
-		
+			resSet->GetString("DEVICE_SSN",dev->ssn);
 			dev->dev_id = resSet->GetLong("DEVICE_INST_ID");			
 			dev->plan_id = resSet->GetLong("svc_providers_id");			
 			bRet = true;
 		}
 	}	
 
-	LOG_TRACE("RelDBConn");
 	pDBManager->RelDBConn(pConn);	
     return bRet;
 }
@@ -487,7 +493,7 @@ bool CDevModel::getDevAccessRec(const string& mac,uint64_t *plan_id) {
 	CDBManager* pDBManager = CDBManager::getIns();
 	CDBConn* pConn = pDBManager->GetDBConn();
 	if (!pConn) {
-		LOG_ERROR("get conn err"); 
+		APP_ERROR("get conn err"); 
 		return bRet;
 	}	
 
@@ -500,14 +506,13 @@ bool CDevModel::getDevAccessRec(const string& mac,uint64_t *plan_id) {
 		while (resSet->Next()) {
 			tmp_plan_id = resSet->GetLong("SVC_PROVIDERS_ID");	
 			if (plan_id) {
-				LOG_TRACE("plan_id:%u",tmp_plan_id); 
+				APP_TRACE("plan_id:%u",tmp_plan_id); 
 				*plan_id = tmp_plan_id;
 			}
 			bRet = true;
 		}
 	}	
 
-	LOG_TRACE("RelDBConn");
 	pDBManager->RelDBConn(pConn);	
     return bRet;
 }
@@ -517,7 +522,7 @@ bool CDevModel::updateDevAccessRec(const DevHashMapPtr &dev,uint64_t plan_id,int
 	CDBManager* pDBManager = CDBManager::getIns();
 	CDBConn* pConn = pDBManager->GetDBConn();
 	if (!pConn) {
-		LOG_ERROR("get conn err"); 
+		APP_ERROR("get conn err"); 
 		return bRet;
 	}
 
@@ -531,43 +536,216 @@ bool CDevModel::updateDevAccessRec(const DevHashMapPtr &dev,uint64_t plan_id,int
 		(lt.tm_year+1900), (lt.tm_mon + 1), lt.tm_mday,lt.tm_hour, lt.tm_min, lt.tm_sec);
 
 	if (1 == up_or_insert) {		
-		snprintf(cmd,sizeof(cmd)-1,"insert into gw_device_access_rec (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) "
-			"values('%lu','%lu','%s','%s','%s','%s','%s','%s','%s','%s');",
-			"DEVICE_INST_ID","SVC_PROVIDERS_ID","ACCESS_TIME","update_time","ACCESS_IP","FIRMWARE_VER","HardwareVer","Vendor","Model","mac_address",
-			dev->dev_id,plan_id,access_time,access_time,dev->remote.c_str(),
-			dev->FirmwareVer.c_str(),dev->HardwareVer.c_str(),dev->Vendor.c_str(),dev->Model.c_str(),dev->MAC.c_str());
+		snprintf(cmd,sizeof(cmd)-1,"insert into gw_device_access_rec (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) "
+			"values('%lu','%lu','%d','%d','%s','%s','%s','%s','%s','%s','%s','%s','%s');",
+			"DEVICE_INST_ID","SVC_PROVIDERS_ID","PROV_CODE","CITY_CODE","ACCESS_TIME","update_time","ACCESS_IP","FIRMWARE_VER","HardwareVer","Vendor","Model","DEVICE_OS","mac_address",
+			dev->dev_id,plan_id,dev->Prov_id,dev->City_id,access_time,access_time,dev->remote.c_str(),
+			dev->FirmwareVer.c_str(),dev->HardwareVer.c_str(),dev->Vendor.c_str(),dev->Model.c_str(),dev->PlatformID.c_str(),dev->MAC.c_str());
 	}
 	else if (2 == up_or_insert) {
-		snprintf(cmd,sizeof(cmd)-1,"update gw_device_access_rec set update_time='%s',SVC_PROVIDERS_ID='%lu',ACCESS_IP='%s' where mac_address='%s'",
-			access_time,plan_id,dev->remote.c_str(),dev->MAC.c_str());	
+		snprintf(cmd,sizeof(cmd)-1,"update gw_device_access_rec set update_time='%s',SVC_PROVIDERS_ID='%lu',PROV_CODE='%d',CITY_CODE='%d',ACCESS_IP='%s',DEVICE_OS='%s' where mac_address='%s'",
+			access_time,plan_id,dev->Prov_id,dev->City_id,dev->remote.c_str(),dev->PlatformID.c_str(),dev->MAC.c_str());	
 	}
 	else {
-		LOG_DEBUG("bug fix code\n");
+		APP_DEBUG("bug fix code\n");
 	}
 
-	LOG_TRACE("cmd:%s",cmd); 
+	//APP_DEBUG("cmd:%s\n",cmd);
 	pConn->ExecuteUpdate(cmd);
-
-	LOG_TRACE("RelDBConn");
 	pDBManager->RelDBConn(pConn);	
     return bRet;
 }
 
-void Server::CreateLoopSqdbClTimer() {
-	LOG_TRACE("CreateLoopSqdbClTimer");
+void Server::StatLoopTimer() {
+	sqdbPool* pool = sqdbManager::getIns()->GetDbPool();
+	if (!pool) {
+		APP_ERROR("get pool err");
+		return ;
+	}
+	
+	sqdbCl* cl = pool->GetDbCl("CSpace.dispatcher_stat");
+	if (!cl) {
+		APP_ERROR("get CSpace.dispatcher_stat err");
+		return ;
+	}
 
-	int vm_size_kb = 0;  
-	int rss_size_kb = 0;	
-	long long CurCpuTime =  GetCurCpuTime();
-	long long TotalCpuTime =  GetTotalCpuTime();
-	GetCurMemoryUsage(&vm_size_kb, &rss_size_kb);	
-	LOG_DEBUG("CurCpuTime:%lu, TotalCpuTime:%lu, vm_size_kb:%dk, rss_size_kb:%dk", CurCpuTime, TotalCpuTime, vm_size_kb, rss_size_kb);
+	int64_t nowTime = net::Timestamp::Now().Unix();
+	struct tm tm;
+	char dayName[128] = {0};
+	string strQuery;
+	localtime_r(&nowTime, &tm);
+	snprintf(dayName,127,"%04d%02d%02d",1900+tm.tm_year,1+tm.tm_mon,tm.tm_mday);	
+	slothjson::DispatcherStat_t stat;
+	string stat_obj;
+
+	std::ostringstream cdStream;
+	cdStream << "{\"day\":\"" << dayName << "\"}";
+	string cd = cdStream.str();
+	
+	cl->query(cd,strQuery);	
+
+	if (strQuery.size() > 10) {
+		if (!slothjson::decode(strQuery, stat)) {
+			APP_ERROR("decode stat failed,strQuery:%s",strQuery.c_str());
+			return ;
+		}
+		APP_DEBUG("statOk:%u statOkE8c:%u statErrSn:%u statErrMd5:%u",stat.statOk,stat.statOkE8c,stat.statErrSn,stat.statErrMd5);
+	}
+	else {
+		stat.day = dayName;
+		stat.statOk = 0;
+		stat.statOkE8c = 0;
+		stat.statErrSn = 0;
+		stat.statErrMd5 = 0;
+		APP_DEBUG("dayName:%s day:%s",dayName,stat.day.c_str());
+	}
+	
+	stat.statOk += statOk.load();
+	stat.statOkE8c += statOkE8c.load();
+	stat.statErrSn += statErrSn.load();
+	stat.statErrMd5 += statErrMd5.load();
+
+	statOk.store(0);
+	statOkE8c.store(0);
+	statErrSn.store(0);
+	statErrMd5.store(0);	
+
+	int rc = slothjson::encode<false, slothjson::DispatcherStat_t>(stat, stat_obj);
+	if (!rc) {
+		APP_ERROR("encode ResultAck failed");
+		return ;
+	}				
+
+	std::ostringstream objStream;
+	objStream << "{\"$set\":" << stat_obj << "}";
+	string upsertObj = objStream.str();
+
+	//APP_DEBUG("before upsert dispatcher_stat cd:%s stat_obj:%s",cd.c_str(),upsertObj.c_str());
+	cl->upsert(upsertObj,cd);		
+	APP_DEBUG("after upsert dispatcher_stat cd:%s stat_obj:%s",cd.c_str(),upsertObj.c_str());
 }
 
-void Server::ProcessBootFirst(UDPMessagePtr& msg, const string& requst, slothjson::RPCMethod_t& method) {
+void Server::UpdateLogLoopTimer() {
+	LOG_TRACE("UpdateLogLoopTimer");
+	sqdbPool* pool = sqdbManager::getIns()->GetDbPool();
+	if (!pool) {	
+		LOG_ERROR("get pool err");
+		return ;
+	}
+
+	sqdbCl* cl = pool->GetDbCl("dist.log");
+	if (!cl) {	
+		LOG_ERROR("get dist.log err");
+		return ;
+	}
+	
+	cl->UpdateLoopCsName();
+}
+
+void Server::LogLoopTimer() {
+	std::vector<std::string> objs;	
+	slothjson::cs_name_t name_;
+
+	LOG_TRACE("DropLoopSqdbClTimer");
+	sqdbPool* pool = sqdbManager::getIns()->GetDbPool();
+	if (!pool) {	
+		LOG_ERROR("get pool err");
+		return ;
+	}
+
+	int rc = pool->GetList(SDB_LIST_COLLECTIONSPACES, objs);
+	if (rc <= 0) {
+		LOG_ERROR("GetList err rc:%d",rc);
+		return ;
+	}
+
+	char *start;
+	uint64_t parse_time = 0;
+	char Name[128] = {0};
+	uint64_t now_time = net::Timestamp::Now().Unix();
+	for (size_t i = 0; i < objs.size(); i++) {
+		rc = slothjson::decode(objs[i], name_);
+		if (!rc) {
+			LOG_ERROR("decode cl name err");
+			break;
+		}
+		
+		LOG_TRACE("i:%d obj:%s name:%s", i, objs[i].c_str(), name_.Name.c_str());
+		snprintf(Name,127,"%s",name_.Name.c_str());
+		start = strstr(Name, LOG_LOOP_CHECK_HEAD); //csNameHead
+		if (start) {
+			start = Name + strlen(LOG_LOOP_CHECK_HEAD) + 1; // exp: xxxxxxx_20180626
+			parse_time = base_mktime(start);
+			LOG_TRACE("Name:%s parse_time:%u now_time:%u",Name,parse_time,now_time);
+			if (parse_time && (now_time > parse_time) && ((now_time - parse_time) >= (2*24*60*60))) {
+				LOG_DEBUG("find one dropCollectionSpace:%s",Name);
+				pool->dropCollectionSpace(Name);
+				return ;					
+			}
+		}
+	}
+}
+
+void Server::CreateLoopTimer() {
+	std::lock_guard<std::mutex> lock(mutex_);
+	int64_t eraseMapNum = 0;	
+	int64_t eraseListNum = 0;
+
+	if (!DevHashMapList_.size())
+		return ;
+
+	uint64_t nowTime = net::Timestamp::Now().Unix();
+	APP_DEBUG("before DevHashMapList_.size:%u,devMap_.size:%u",DevHashMapList_.size(),devMap_.size());
+	for (WeakDevHashMapItar it = DevHashMapList_.begin(); it != DevHashMapList_.end();) {
+		DevHashMapPtr dev = it->lock();
+		if (dev) {
+			int64_t age = nowTime - dev->last_time;
+			//APP_DEBUG("mac:%s nowTime:%u last_time:%u age:%ld",dev->MAC.c_str(),nowTime,dev->last_time,age);
+			if (age > idleSeconds_) {
+				//APP_DEBUG("before erase mac:%s size:%u",dev->MAC.c_str(),devMap_.size());
+				devMap_.erase(dev->MAC);
+				//APP_DEBUG("after erase size:%u", devMap_.size());
+				eraseMapNum++;
+			}
+			else if (age < 0) {
+				LOG_WARN("mac:%s Time jump",dev->MAC.c_str());
+				dev->last_time = nowTime;
+			}
+			else {
+				break;
+			}
+			++it;
+		}
+		else {
+			it = DevHashMapList_.erase(it);
+			eraseListNum++;
+		}
+	}
+	
+	APP_DEBUG("after DevHashMapList_.size:%u,devMap_.size:%u, eraseMapNum:%d, eraseListNum:%d",DevHashMapList_.size(), devMap_.size(), eraseMapNum, eraseListNum);
+}
+
+void Server::WriteLog(const string& log) {
+	sqdbPool* pool = sqdbManager::getIns()->GetDbPool();
+	if (!pool) {
+		APP_ERROR("get pool err");
+		return ;
+	}
+	
+	sqdbCl* cl = pool->GetDbCl("dist.log");
+	if (!cl) {
+		APP_ERROR("get dist.log err");
+		return ;
+	}
+	cl->insert(log);		
+	APP_TRACE("after insert ok:%s",log.c_str());
+}
+
+void Server::ProcessBootFirst(UDPMessagePtr& msg, slothjson::RPCMethod_t& method) {
 	DevHashMapPtr macdev;
 	bool rc = false;
 	CDevModel* model = CDevModel::getIns();
+	IPSearch *finder = IPSearch::getIns();
 
 	slothjson::BootFirstAck_t BootFirstAck;
 	std::string BootFirstAck_obj;
@@ -577,68 +755,115 @@ void Server::ProcessBootFirst(UDPMessagePtr& msg, const string& requst, slothjso
 
 	net::Timestamp time_start = net::Timestamp::Now();
 	uint64_t nowTime = time_start.Unix();
-	
-	rc = FindAndNewDev(method.MAC, macdev);
+
+	APP_TRACE("BootFirst brfore mac:%s",method.MAC.c_str());			
+	rc = FindAndNewDev(method.MAC, macdev);	
 	if (rc == false) {
 		macdev->recv_pkts = 1;
+		if (method.json_has_Vendor())
+			macdev->Vendor = method.Vendor;
+		if (method.json_has_Model())
+			macdev->Model = method.Model;
+		if (method.json_has_FirmwareVer())
+			macdev->FirmwareVer = method.FirmwareVer;
+		if (method.json_has_HardwareVer())
+			macdev->HardwareVer = method.HardwareVer;
+		if (method.json_has_IPAddr())
+			macdev->IPAddr = method.IPAddr;
+		if (method.json_has_PlatformID()) {
+			macdev->PlatformID = method.PlatformID;
+			if (strcasecmp(macdev->PlatformID.c_str(),"OTHER")) {
+				if (!model->getDevSn(macdev)) {
+					//APP_ERROR("not find DevSn MAC:%s",macdev->MAC.c_str());		
+					ack.Result = -7;
+					ack.Ack = "not find DevSn";
+					rc = slothjson::encode<false, slothjson::ResultAck_t>(ack, BootFirstAck_obj);
+					if (!rc) {
+						APP_ERROR("encode BootFirstAck_obj failed");
+						return ;
+					}
+					
+					ack.skip_Ack();
+					rc = slothjson::encode<false, slothjson::ResultAck_t>(ack, ack_obj);
+					if (!rc) {
+						APP_ERROR("encode ResultAck failed");
+						return ;
+					}				
+					SendMessage(msg->sockfd(), msg->remote_addr(), ack_obj);
+					macdev->last_time = nowTime;
+					statErrSn++;
+					goto ADD_LOG;
+				}
+			}
+		}
+		macdev->remote = sock::ToIPPort(msg->remote_addr());
+		if (finder) {
+			auto ipStr = sock::ToIP(msg->remote_addr());
+			finder->QueryToProvCity(ipStr,macdev->Prov_id,macdev->City_id);
+			APP_TRACE("IPSearch remote:%s,ipStr:%s,Prov:%d,City:%d",macdev->remote.c_str(),ipStr.c_str(),macdev->Prov_id,macdev->City_id);
+		}
 	}
 	else {
 		if (macdev->last_time != nowTime) {
-			macdev->recv_pkts = 0;
+			macdev->recv_pkts = 1;
 		} 
-		else if (++macdev->recv_pkts > 3) {
-			LOG_ERROR("mac:%s pakcet overload!!", method.MAC.c_str());
-			ack.Result = -1;
-			ack.Ack = "pakcet overload";
-			ack.skip_Ack();
-			rc = slothjson::encode<false, slothjson::ResultAck_t>(ack, ack_obj);
-			if (!rc) {
-				LOG_ERROR("encode ResultAck failed");
-				return ;
+		else {
+			/* one second process one mac */
+			macdev->recv_pkts++;
+			if (!(macdev->recv_pkts%3)) {
+				APP_ERROR("mac:%s pakcet overload!!", macdev->MAC.c_str());
+				ack.Result = -1;
+				ack.Ack = "pakcet overload";
+				ack.skip_Ack();
+				rc = slothjson::encode<false, slothjson::ResultAck_t>(ack, ack_obj);
+				if (!rc) {
+					APP_ERROR("encode ResultAck failed");
+					return ;
+				}				
+				SendMessage(msg->sockfd(), msg->remote_addr(), ack_obj);
 			}
-			
-			SendMessage(msg->sockfd(), msg->remote_addr(), ack_obj);
 			return ;
 		}
 	}
 	
-	macdev->MAC = method.MAC;
-	macdev->Vendor = method.Vendor;
-	macdev->Model = method.MAC;
-	macdev->FirmwareVer = method.FirmwareVer;
-	macdev->HardwareVer = method.HardwareVer;
-	macdev->IPAddr = method.IPAddr;
-	macdev->PlatformID = method.PlatformID;
-	macdev->remote = sock::ToIPPort(msg->remote_addr());
 	if (nowTime - macdev->last_time > DEV_RND_TIMEOUT) {
-		base::TrueRandom Random;
-		Random.NextBytesBinStr(macdev->rnd, DEV_RDM_SIZE);
-		LOG_DEBUG("MAC:%s create rnd:%s",macdev->MAC.c_str(),macdev->rnd.c_str());
+		base::Random Random(static_cast<uint32_t>(time_start.UnixNano()));		
+		Random.RandomBinString(DEV_RDM_SIZE, &macdev->rnd);
+		//base::TrueRandom Random;
+		//Random.NextBytesBinStr(macdev->rnd, DEV_RDM_SIZE);
+		APP_TRACE("MAC:%s, rnd:%s, remote:%s",macdev->MAC.c_str(),macdev->rnd.c_str(),macdev->remote.c_str());
 	}
 	macdev->last_time = nowTime;
-	
+
 	BootFirstAck.Result = 0;
 	BootFirstAck.ChallengeCode = macdev->rnd;	
 	BootFirstAck.Interval = 60;
 	BootFirstAck.ServerIP = macdev->IPAddr;
 	rc = slothjson::encode<false, slothjson::BootFirstAck_t>(BootFirstAck, BootFirstAck_obj);
 	if (!rc) {
-		LOG_ERROR("encode BootFirstAck failed");
+		APP_ERROR("encode BootFirstAck failed");
 		return ;
 	}
 	
 	SendMessage(msg->sockfd(), msg->remote_addr(), BootFirstAck_obj);	
-	LOG_TRACE("send ok BootFirstAck_obj:%s",BootFirstAck_obj.c_str());
+	APP_TRACE("send ok BootFirstAck_obj:%s",BootFirstAck_obj.c_str());
 
+ADD_LOG:
 	int macVipFlag = model->GetFindMacVip(macdev->MAC);
-	if (!macVipFlag) {
-		LOG_DEBUG("mac:%s macVipFlag:%d skip log",macdev->MAC.c_str(),macVipFlag);
+	if (!macVipFlag) 
 		return ;
-	}
 
 	net::Timestamp time_end = net::Timestamp::Now();
 	slothjson::DispatcherLog_t log;
 	string log_obj;
+	string requst_obj;
+
+	method.skip_CheckSN();
+	rc = slothjson::encode<false, slothjson::RPCMethod_t>(method, requst_obj);
+	if (!rc) {
+		APP_ERROR("rebuild RPCMethod_t failed");
+		return ;
+	}
 
 	create_id_num(log.idnum,DEV_LOGID_SIZE);
 	log.direction = 3;   //dev to ser
@@ -652,32 +877,19 @@ void Server::ProcessBootFirst(UDPMessagePtr& msg, const string& requst, slothjso
 	log.addtime = time_end.Unix();
 	log.addtime_ms = time_end.UnixMs() - time_end.Unix() * 1000;
 	log.costtime = time_end.UnixMs() - time_start.UnixMs();
-	log.indata = requst;
+	log.indata = requst_obj;
 	log.outdata = BootFirstAck_obj;
 	log.userip = macdev->remote;
 	rc = slothjson::encode<false, slothjson::DispatcherLog_t>(log, log_obj);
 	if (!rc) {
-		LOG_ERROR("encode BootFirstAck failed");
+		APP_ERROR("encode BootFirstAck failed");
 		return ;
 	}
 	
-	LOG_TRACE("before insert");
-	sqdbPool* pool = sqdbManager::getIns()->GetDbPool();
-	if (!pool) {
-		LOG_ERROR("get pool err");
-		return ;
-	}
-	
-	sqdbCl* cl = pool->GetDbCl("CSpace.manager_log");
-	if (!cl) {
-		LOG_ERROR("get CSpace.manager_log err");
-		return ;
-	}
-	cl->insert(log_obj);		
-	LOG_TRACE("after insert ok:%s",log_obj.c_str());	
+	WriteLog(log_obj);
 }
 
-void Server::ProcessRegisterFirst(UDPMessagePtr& msg, const string& requst, slothjson::RPCMethod_t& method) {
+void Server::ProcessRegisterFirst(UDPMessagePtr& msg, slothjson::RPCMethod_t& method) {
 	DevHashMapPtr macdev;
 	int err_ack = 0;
 	string err_desc;
@@ -693,7 +905,8 @@ void Server::ProcessRegisterFirst(UDPMessagePtr& msg, const string& requst, slot
 
 	OpSvcAddr_t SvcAddr;
 	RegisterFirstAck_t RegisterFirstAck;
-	std::string RegisterFirstAck_obj;
+	std::string RegisterFirstAck_obj;	
+	std::ostringstream osPort;
 
 	slothjson::ResultAck_t ack;
 	std::string ack_obj;
@@ -704,67 +917,84 @@ void Server::ProcessRegisterFirst(UDPMessagePtr& msg, const string& requst, slot
 	net::Timestamp time_end;
 	slothjson::DispatcherLog_t log;
 	string log_obj;
-	sqdbPool* pool = nullptr;
-	sqdbCl* cl = nullptr;
+	string requst_obj;
 
+	APP_TRACE("RegisterFirst before MAC:%s",method.MAC.c_str());			
 	if (!FindDev(method.MAC, macdev)) {
-		LOG_ERROR("not find mac:%s,requst:%s",method.MAC.c_str(),requst.c_str());			
+		APP_ERROR("not find MAC:%s",method.MAC.c_str());			
 		err_ack = -2;
 		err_desc = "not find dev";
 		goto ERROR;
 	}
 	
 	if (macdev->PlatformID.size()) {			
-		LOG_TRACE("MAC:%s,PlatformID:%s",macdev->MAC.c_str(),macdev->PlatformID.c_str());
+		APP_TRACE("MAC:%s,PlatformID:%s",macdev->MAC.c_str(),macdev->PlatformID.c_str());
 		if (!strcasecmp(macdev->PlatformID.c_str(),"NULL") || !strcasecmp(macdev->PlatformID.c_str(),"OTHER")) {
 			model->GetOpSvcAddrByOther(SvcAddr);
-			LOG_DEBUG("MAC:%s svr_addr:%s svr_port:%d",macdev->MAC.c_str(),SvcAddr.svr_addr.c_str(),SvcAddr.svr_port);
+			APP_DEBUG("OTHER MAC:%s svr_addr:%s svr_port:%d",macdev->MAC.c_str(),SvcAddr.svr_addr.c_str(),SvcAddr.svr_port);
+			statOkE8c++;
 			goto RegisterFirst;			
 		}
 	}
-	
-	model->getDevSn(macdev);		
-	LOG_TRACE("MAC:%s,CheckSN:%s,sn:%s,ssn:%s,dev_id:%lu,plan_id:%lu",
-			macdev->MAC.c_str(),method.CheckSN.c_str(),macdev->sn.c_str(),macdev->ssn.c_str(),macdev->dev_id,macdev->plan_id);
-
+#if 0
+	if (!model->getDevSn(macdev)) {
+		APP_ERROR("not find DevSn MAC:%s",macdev->MAC.c_str());		
+		err_ack = -2;
+		err_desc = "not find DevSn";
+		goto ERROR;
+	}
+	APP_TRACE("MAC:%s,CheckSN:%s,sn:%s,ssn:%s,ssid1:%s,ssid1pass:%s,adminpass:%s,dev_id:%lu,plan_id:%lu",
+			macdev->MAC.c_str(),
+			method.CheckSN.c_str(),
+			macdev->sn.c_str(),
+			macdev->ssn.c_str(),
+			macdev->ssid1.c_str(),
+			macdev->ssid1pass.c_str(),
+			macdev->adminpass.c_str(),
+			macdev->dev_id,
+			macdev->plan_id);
+#endif
 	if (!DevSnMd5Check(method.CheckSN,macdev)) {
-		LOG_ERROR("mac:%s DevSnMd5Check failed",method.MAC.c_str());			
+		APP_ERROR("MAC:%s Vendor:%s Model:%s DevSnMd5Check failed",macdev->MAC.c_str(),macdev->Vendor.c_str(),macdev->Model.c_str());			
 		err_ack = -2;
 		err_desc = "md5 check failed";
+		statErrMd5++;
 		goto ERROR;
 	}
 
 	id = macdev->plan_id;
 	Platcode = model->GetPlatcodebyMacdev(macdev->MAC);
 	if (Platcode > 0 && Platcode != id) {
-		LOG_DEBUG("MAC:%s,id change to:%u get by Platcode",macdev->MAC.c_str(),Platcode);
+		APP_DEBUG("MAC:%s,id change (%u) to (%u) get by Platcode",macdev->MAC.c_str(),id,Platcode);
 		id = Platcode;
 	}
 
 	if (!model->getDevAccessRec(macdev->MAC,&gw_device_access_rec_plan_id)) {
 		UpdateInsertFlag = 1;  // insert
-		LOG_DEBUG("MAC:%s need insert gw_device_access_rec",macdev->MAC.c_str());
+		APP_TRACE("MAC:%s need insert gw_device_access_rec",macdev->MAC.c_str());
 	}
 	else {
-		LOG_TRACE("getDevAccessRec ok MAC:%s plan_id:%u",macdev->MAC.c_str(),gw_device_access_rec_plan_id); 
-		if (id != CNVGC_DB_NO_RECORD && id == gw_device_access_rec_plan_id) {
+		APP_TRACE("getDevAccessRec ok MAC:%s plan_id:%u",macdev->MAC.c_str(),gw_device_access_rec_plan_id); 
+		if (id != 0 && id == gw_device_access_rec_plan_id) {
 			UpdateInsertFlag = 0;
-			LOG_TRACE("MAC:%s same getDevAccessRec plan_id, skip",macdev->MAC.c_str());
+			APP_TRACE("MAC:%s same getDevAccessRec plan_id, skip",macdev->MAC.c_str());
 		}
 		else {
-			LOG_DEBUG("MAC:%s not same to getDevAccessRec plan_id, need Update",macdev->MAC.c_str());
-			id = gw_device_access_rec_plan_id;
+			if (id == 0) {
+				APP_DEBUG("MAC:%s not same, need Update (%u)",macdev->MAC.c_str(),gw_device_access_rec_plan_id);
+				id = gw_device_access_rec_plan_id;
+			}
 			UpdateInsertFlag = 2;  
 		}
 	}
 	
-	if (id == CNVGC_DB_NO_RECORD) {
+	if (id == 0) {
 		id = model->GetIdPerByWeight();
-		LOG_DEBUG("MAC:%s GetIdPerByWeight id to:%u",macdev->MAC.c_str(),id);
+		APP_TRACE("MAC:%s GetIdPerByWeight id to:%u",macdev->MAC.c_str(),id);
 	}
 	
 	if (!model->GetOpSvcAddrByPlanID(id,SvcAddr)) {
-		LOG_ERROR("mac:%s no SvcAddr by id:%d", method.MAC.c_str(),id);
+		APP_ERROR("MAC:%s no SvcAddr by id:%d", macdev->MAC.c_str(),id);
 		err_ack = -2;
 		err_desc = "no SvcAddr by id";		
 		goto ERROR;
@@ -775,23 +1005,62 @@ void Server::ProcessRegisterFirst(UDPMessagePtr& msg, const string& requst, slot
 	}
 
 RegisterFirst:
-	RegisterFirstAck.Result = 0;
-	RegisterFirstAck.ServerAddr = SvcAddr.svr_addr;
+	RegisterFirstAck.Result = 2;
 	RegisterFirstAck.Interval = 60;
-	RegisterFirstAck.ServerPort = SvcAddr.svr_port;
 	RegisterFirstAck.ServerIP = macdev->IPAddr;
+	RegisterFirstAck.ServerAddr = SvcAddr.svr_addr;
+	
+	osPort << SvcAddr.svr_port;	
+	RegisterFirstAck.ServerPort = osPort.str();
+	
 	rc = slothjson::encode<false, slothjson::RegisterFirstAck_t>(RegisterFirstAck, RegisterFirstAck_obj);
 	if (!rc) {
-		LOG_ERROR("encode RegisterFirstAck failed");
+		APP_ERROR("encode RegisterFirstAck failed");
 		return ;
 	}
 	
 	SendMessage(msg->sockfd(), msg->remote_addr(), RegisterFirstAck_obj);
-	DLOG_TRACE("RegisterFirstAck_obj:%s",RegisterFirstAck_obj.c_str());
+	APP_TRACE("RegisterFirstAck_obj:%s",RegisterFirstAck_obj.c_str());
+	statOk++;
+	goto ADD_LOG;
+
+ERROR:
+	ack.Result = err_ack;
+	ack.Ack = err_desc;	
+	rc = slothjson::encode<false, slothjson::ResultAck_t>(ack, RegisterFirstAck_obj);
+	if (!rc) {
+		APP_ERROR("encode log_obj failed");
+		return ;
+	}
+
+	ack.skip_Ack();
+	rc = slothjson::encode<false, slothjson::ResultAck_t>(ack, ack_obj);
+	if (!rc) {
+		APP_ERROR("encode ResultAck failed");
+		return ;
+	}
+	//APP_TRACE("ack_obj:%s",ack_obj.c_str());
+	SendMessage(msg->sockfd(), msg->remote_addr(), ack_obj);
+	//APP_DEBUG("err ack log mac:%s,RegisterFirstAck_obj:%s",method.MAC.c_str(),RegisterFirstAck_obj.c_str());
+
+ADD_LOG:
+	if (!macdev)
+		return;
 
 	macVipFlag = model->GetFindMacVip(macdev->MAC);
-	if (!macVipFlag) {
-		LOG_DEBUG("mac:%s macVipFlag:%d skip log",macdev->MAC.c_str(),macVipFlag);
+	if (!macVipFlag) 
+		return ;
+
+	method.skip_Vendor();
+	method.skip_Model();
+	method.skip_FirmwareVer();
+	method.skip_HardwareVer();
+	method.skip_IPAddr();	
+	method.skip_PlatformID();
+
+	rc = slothjson::encode<false, slothjson::RPCMethod_t>(method, requst_obj);
+	if (!rc) {
+		APP_ERROR("rebuild RPCMethod_t failed");
 		return ;
 	}
 
@@ -808,69 +1077,53 @@ RegisterFirst:
 	log.addtime = time_end.Unix();
 	log.addtime_ms = time_end.UnixMs() - time_end.Unix() * 1000;
 	log.costtime = time_end.UnixMs() - time_start.UnixMs();
-	log.indata = requst;
+	log.indata = requst_obj;
 	log.outdata = RegisterFirstAck_obj;
 	log.userip = macdev->remote;
 	rc = slothjson::encode<false, slothjson::DispatcherLog_t>(log, log_obj);
 	if (!rc) {
-		LOG_ERROR("encode BootFirstAck failed");
+		APP_ERROR("encode BootFirstAck failed");
 		return ;
 	}
 	
-	LOG_TRACE("before insert");
-	pool = sqdbManager::getIns()->GetDbPool();
-	if (!pool) {
-		LOG_ERROR("get pool err");
-		return ;
-	}
-	
-	cl = pool->GetDbCl("CSpace.manager_log");
-	if (!cl) {
-		LOG_ERROR("get CSpace.manager_log err");
-		return ;
-	}
-	cl->insert(log_obj);		
-	LOG_TRACE("after insert ok:%s",log_obj.c_str());	
-	return ;
-
-ERROR:
-	ack.Result = err_ack;
-	ack.Ack = err_desc;
-	ack.skip_Ack();
-	rc = slothjson::encode<false, slothjson::ResultAck_t>(ack, ack_obj);
-	if (!rc) {
-		LOG_ERROR("encode ResultAck failed");
-		return ;
-	}
-	
-	SendMessage(msg->sockfd(), msg->remote_addr(), ack_obj);
+	WriteLog(log_obj);
 }
 
 void Server::UDPMessageProcess(UDPMessagePtr& msg) {	
-	LOG_TRACE("UDPMessageProcess");	
 	slothjson::RPCMethod_t method;
 	bool rc = false;
 	
     std::string requst = msg->NextAllString();
-	DLOG_TRACE("requst:%d %s",requst.size(),requst.c_str());
+	APP_TRACE("requst:%d %s",requst.size(),requst.c_str());
+	
 	if (!slothjson::decode(requst, method)) {
-		LOG_ERROR("decode method failed,requst:%s",requst.c_str());
+		APP_ERROR("decode method failed,requst(%d):%s",requst.size(),requst.c_str());
 		return ;
 	}
 	
 	if (!method.json_has_RPCMethod()) {
-		LOG_ERROR("no RPCMethod,requst:%s",requst.c_str());
+		APP_TRACE("no RPCMethod,requst:%s",requst.c_str());
+		return ;
+	}
+
+	if (!method.json_has_MAC() || !method.MAC.size()) {
+		APP_TRACE("no MAC,requst:%s",requst.c_str());
 		return ;
 	}
 
 	if (method.RPCMethod == "BootFirst") {		
-		ProcessBootFirst(msg,requst,method);
+		ProcessBootFirst(msg,method);
 	}
 	else if (method.RPCMethod == "RegisterFirst") {
-		ProcessRegisterFirst(msg,requst,method);
+		if (!method.json_has_CheckSN()) {
+			APP_TRACE("no CheckSN,requst:%s",requst.c_str());
+			return ;
+		}
+		
+		ProcessRegisterFirst(msg,method);
 	}
 	else {
-		LOG_ERROR("err RPCMethod:%s",method.RPCMethod.c_str());
+		APP_TRACE("err RPCMethod:%s,requst:%s",method.RPCMethod.c_str(),requst.c_str());
 		slothjson::ResultAck_t ack;
 		std::string ack_obj;
 		ack.Result = -1;
@@ -878,7 +1131,7 @@ void Server::UDPMessageProcess(UDPMessagePtr& msg) {
 		ack.skip_Ack();
 		rc = slothjson::encode<false, slothjson::ResultAck_t>(ack, ack_obj);
 		if (!rc) {
-			LOG_ERROR("encode ResultAck failed");
+			APP_ERROR("encode ResultAck failed");
 			return ;
 		}		
 		SendMessage(msg->sockfd(), msg->remote_addr(), ack_obj);
@@ -887,20 +1140,26 @@ void Server::UDPMessageProcess(UDPMessagePtr& msg) {
 
 
 void Server::UDPMessage(EventLoop* loop, UDPMessagePtr& msg) {
-    DLOG_TRACE("UDPMessage remote_ipport:%s",sock::ToIPPort(msg->remote_addr()).c_str());
+    APP_TRACE("UDPMessage remote_ipport:%s",sock::ToIPPort(msg->remote_addr()).c_str());
+
+	if (msg->size() < 8) {
+		return ;
+	}
+	
 	net::EventLoop* msg_loop = msgPool_->GetNextLoop();
 	if (!msg_loop) {
-		LOG_ERROR("loop IsEmpty"); 
+		APP_ERROR("loop IsEmpty"); 
 		return ;
 	}	
 
 	msg_loop->RunInLoop(std::bind(&Server::UDPMessageProcess, this, msg));
-	DLOG_TRACE("Message:%p,use_count:%d", msg.get(), msg.use_count());
+	APP_TRACE("Message:%p,use_count:%d", msg.get(), msg.use_count());
 }
 
 void Server::Init() {
-    string host = config_reader::ins()->GetString("kserver", "host", "0.0.0.0"); 
-    long  port = config_reader::ins()->GetNumber("kserver", "port", 12112);
+    auto hostPorts = config_reader::ins()->GetStringList2("kserver", "hostPorts"); 
+    string serverIp = config_reader::ins()->GetString("kserver", "serverIp", "172.18.0.112");
+    //long  port = config_reader::ins()->GetNumber("kserver", "port", 12112);
     short serverThreadNum = config_reader::ins()->GetNumber("kserver", "threadNum", 2);
     
     //short maxConns = config_reader::ins()->GetNumber("kserver", "maxConns", 1024);
@@ -918,24 +1177,26 @@ void Server::Init() {
     msgPool_->Start(true);   
 
 
-	LOG_INFO("bind udp addr:%s %d ///////", host.c_str(), port);
     UDPhostServer_.reset(new UDPServer());	
 	UDPhostServer_->SetEventLoopThreadPool(serverPool_);
 	UDPhostServer_->SetMessageHandler(std::bind(&Server::UDPMessage, this, std::placeholders::_1, std::placeholders::_2));
-    UDPhostServer_->Init(host,port);
+    UDPhostServer_->Init(hostPorts);
     UDPhostServer_->Start();
-    host_ = host;
+    host_ = serverIp;
 
 	//LOG_INFO("RunEvery GetQosSwitchTimer 60s /////////");
 	//GetQosSwitchTimer();
     //base_loop_->RunEvery(net::Duration(60.0), std::bind(&apLogServer::GetQosSwitchTimer, this));
-    //base_loop_->RunEvery(net::Duration(120.0), std::bind(&apLogServer::CreateLoopSqdbClTimer, this));
-    
+    base_loop_->RunEvery(net::Duration(60.0), std::bind(&Server::CreateLoopTimer, this));
+	base_loop_->RunEvery(net::Duration(660.0), std::bind(&Server::LogLoopTimer, this));	
+	base_loop_->RunEvery(net::Duration(102.0), std::bind(&Server::UpdateLogLoopTimer, this));
+	base_loop_->RunEvery(net::Duration(303.0), std::bind(&Server::StatLoopTimer, this));
+	
 	CDevModel* model = CDevModel::getIns();
 	model->GetNetcoreConfigTimer();
-	base_loop_->RunEvery(net::Duration(80.0), std::bind(&CDevModel::GetNetcoreConfigTimer, model));	
+	base_loop_->RunEvery(net::Duration(123.0), std::bind(&CDevModel::GetNetcoreConfigTimer, model));	
 	model->GetOpSvcAddrTimer();
-	base_loop_->RunEvery(net::Duration(120.0), std::bind(&CDevModel::GetOpSvcAddrTimer, model));
+	base_loop_->RunEvery(net::Duration(240.0), std::bind(&CDevModel::GetOpSvcAddrTimer, model));
 }
 
 

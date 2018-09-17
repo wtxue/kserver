@@ -621,14 +621,13 @@ int CacheManager::Init() {
 	int  dbIdx = config_reader::ins()->GetNumber("redis", "dbIdx", 1);
     int maxConnNum = config_reader::ins()->GetNumber("redis", "maxConnNum", 48);	
 
-		CachePool* pCachePool = new CachePool(name, host, port, dbIdx, maxConnNum);
-		if (pCachePool->Init()) {
-			REDIS_ERROR("Init cache pool failed");
-			return 3;
-		}
+	CachePool* pCachePool = new CachePool(name, host, port, dbIdx, maxConnNum);
+	if (pCachePool->Init()) {
+		REDIS_ERROR("Init cache pool failed");
+		return 3;
+	}
 
-		m_cache_pool_map.insert(make_pair(pool_name, pCachePool));
-
+	m_cache_pool_map.insert(make_pair(pool_name, pCachePool));
 }
 
 CacheConn* CacheManager::GetCacheConn(const char* pool_name) {

@@ -5,6 +5,59 @@
 
 namespace slothjson {
 
+cs_name_t::cs_name_t()
+{
+    __skip_Name = false;
+    __json_has_Name = false;
+}
+
+cs_name_t& cs_name_t::operator=(const cs_name_t& obj_val)
+{
+    this->Name = obj_val.Name;
+    return *this;
+}
+
+bool cs_name_t::operator==(const cs_name_t& obj_val) const
+{
+    if (!(this->Name == obj_val.Name)) return false;
+    return true;
+}
+
+bool cs_name_t::encode(allocator_t& alloc, rapidjson::Value& json_val) const
+{
+    do
+    {
+        json_val.SetObject();
+        if (!__skip_Name && !encode_field(Name, "Name", alloc, json_val)) break;
+
+        return true;
+    } while (0);
+
+    return false;
+}
+
+bool cs_name_t::decode(const rapidjson::Value& json_val)
+{
+    do
+    {
+        if (!decode_field(json_val, "Name", Name, __json_has_Name)) break;
+
+        return true;
+    } while (0);
+
+    return false;
+}
+
+bool encode(const cs_name_t& obj_val, allocator_t& alloc, rapidjson::Value& json_val)
+{
+    return obj_val.encode(alloc, json_val);
+}
+
+bool decode(const rapidjson::Value& json_val, cs_name_t& obj_val)
+{
+    return obj_val.decode(json_val);
+}
+
 RPCMethod_t::RPCMethod_t()
 {
     __skip_RPCMethod = false;
@@ -264,7 +317,6 @@ RegisterFirstAck_t::RegisterFirstAck_t()
     __skip_Interval = false;
     __json_has_Interval = false;
 
-    ServerPort = 0;
     __skip_ServerPort = false;
     __json_has_ServerPort = false;
 
@@ -331,182 +383,6 @@ bool encode(const RegisterFirstAck_t& obj_val, allocator_t& alloc, rapidjson::Va
 }
 
 bool decode(const rapidjson::Value& json_val, RegisterFirstAck_t& obj_val)
-{
-    return obj_val.decode(json_val);
-}
-
-DevMap_t::DevMap_t()
-{
-    __skip_MAC = false;
-    __json_has_MAC = false;
-
-    __skip_Vendor = false;
-    __json_has_Vendor = false;
-
-    __skip_Model = false;
-    __json_has_Model = false;
-
-    __skip_FirmwareVer = false;
-    __json_has_FirmwareVer = false;
-
-    __skip_HardwareVer = false;
-    __json_has_HardwareVer = false;
-
-    __skip_IPAddr = false;
-    __json_has_IPAddr = false;
-
-    __skip_PlatformID = false;
-    __json_has_PlatformID = false;
-
-    __skip_remote = false;
-    __json_has_remote = false;
-
-    __skip_rnd = false;
-    __json_has_rnd = false;
-
-    last_time = 0;
-    __skip_last_time = false;
-    __json_has_last_time = false;
-
-    recv_pkts = 0;
-    __skip_recv_pkts = false;
-    __json_has_recv_pkts = false;
-
-    __skip_sn = false;
-    __json_has_sn = false;
-
-    __skip_ssn = false;
-    __json_has_ssn = false;
-
-    __skip_ssid1 = false;
-    __json_has_ssid1 = false;
-
-    __skip_ssid1pass = false;
-    __json_has_ssid1pass = false;
-
-    __skip_adminpass = false;
-    __json_has_adminpass = false;
-
-    dev_id = 0;
-    __skip_dev_id = false;
-    __json_has_dev_id = false;
-
-    plan_id = 0;
-    __skip_plan_id = false;
-    __json_has_plan_id = false;
-}
-
-DevMap_t& DevMap_t::operator=(const DevMap_t& obj_val)
-{
-    this->MAC = obj_val.MAC;
-    this->Vendor = obj_val.Vendor;
-    this->Model = obj_val.Model;
-    this->FirmwareVer = obj_val.FirmwareVer;
-    this->HardwareVer = obj_val.HardwareVer;
-    this->IPAddr = obj_val.IPAddr;
-    this->PlatformID = obj_val.PlatformID;
-    this->remote = obj_val.remote;
-    this->rnd = obj_val.rnd;
-    this->last_time = obj_val.last_time;
-    this->recv_pkts = obj_val.recv_pkts;
-    this->sn = obj_val.sn;
-    this->ssn = obj_val.ssn;
-    this->ssid1 = obj_val.ssid1;
-    this->ssid1pass = obj_val.ssid1pass;
-    this->adminpass = obj_val.adminpass;
-    this->dev_id = obj_val.dev_id;
-    this->plan_id = obj_val.plan_id;
-    return *this;
-}
-
-bool DevMap_t::operator==(const DevMap_t& obj_val) const
-{
-    if (!(this->MAC == obj_val.MAC)) return false;
-    if (!(this->Vendor == obj_val.Vendor)) return false;
-    if (!(this->Model == obj_val.Model)) return false;
-    if (!(this->FirmwareVer == obj_val.FirmwareVer)) return false;
-    if (!(this->HardwareVer == obj_val.HardwareVer)) return false;
-    if (!(this->IPAddr == obj_val.IPAddr)) return false;
-    if (!(this->PlatformID == obj_val.PlatformID)) return false;
-    if (!(this->remote == obj_val.remote)) return false;
-    if (!(this->rnd == obj_val.rnd)) return false;
-    if (!(this->last_time == obj_val.last_time)) return false;
-    if (!(this->recv_pkts == obj_val.recv_pkts)) return false;
-    if (!(this->sn == obj_val.sn)) return false;
-    if (!(this->ssn == obj_val.ssn)) return false;
-    if (!(this->ssid1 == obj_val.ssid1)) return false;
-    if (!(this->ssid1pass == obj_val.ssid1pass)) return false;
-    if (!(this->adminpass == obj_val.adminpass)) return false;
-    if (!(this->dev_id == obj_val.dev_id)) return false;
-    if (!(this->plan_id == obj_val.plan_id)) return false;
-    return true;
-}
-
-bool DevMap_t::encode(allocator_t& alloc, rapidjson::Value& json_val) const
-{
-    do
-    {
-        json_val.SetObject();
-        if (!__skip_MAC && !encode_field(MAC, "MAC", alloc, json_val)) break;
-        if (!__skip_Vendor && !encode_field(Vendor, "Vendor", alloc, json_val)) break;
-        if (!__skip_Model && !encode_field(Model, "Model", alloc, json_val)) break;
-        if (!__skip_FirmwareVer && !encode_field(FirmwareVer, "FirmwareVer", alloc, json_val)) break;
-        if (!__skip_HardwareVer && !encode_field(HardwareVer, "HardwareVer", alloc, json_val)) break;
-        if (!__skip_IPAddr && !encode_field(IPAddr, "IPAddr", alloc, json_val)) break;
-        if (!__skip_PlatformID && !encode_field(PlatformID, "PlatformID", alloc, json_val)) break;
-        if (!__skip_remote && !encode_field(remote, "remote", alloc, json_val)) break;
-        if (!__skip_rnd && !encode_field(rnd, "rnd", alloc, json_val)) break;
-        if (!__skip_last_time && !encode_field(last_time, "last_time", alloc, json_val)) break;
-        if (!__skip_recv_pkts && !encode_field(recv_pkts, "recv_pkts", alloc, json_val)) break;
-        if (!__skip_sn && !encode_field(sn, "sn", alloc, json_val)) break;
-        if (!__skip_ssn && !encode_field(ssn, "ssn", alloc, json_val)) break;
-        if (!__skip_ssid1 && !encode_field(ssid1, "ssid1", alloc, json_val)) break;
-        if (!__skip_ssid1pass && !encode_field(ssid1pass, "ssid1pass", alloc, json_val)) break;
-        if (!__skip_adminpass && !encode_field(adminpass, "adminpass", alloc, json_val)) break;
-        if (!__skip_dev_id && !encode_field(dev_id, "dev_id", alloc, json_val)) break;
-        if (!__skip_plan_id && !encode_field(plan_id, "plan_id", alloc, json_val)) break;
-
-        return true;
-    } while (0);
-
-    return false;
-}
-
-bool DevMap_t::decode(const rapidjson::Value& json_val)
-{
-    do
-    {
-        if (!decode_field(json_val, "MAC", MAC, __json_has_MAC)) break;
-        if (!decode_field(json_val, "Vendor", Vendor, __json_has_Vendor)) break;
-        if (!decode_field(json_val, "Model", Model, __json_has_Model)) break;
-        if (!decode_field(json_val, "FirmwareVer", FirmwareVer, __json_has_FirmwareVer)) break;
-        if (!decode_field(json_val, "HardwareVer", HardwareVer, __json_has_HardwareVer)) break;
-        if (!decode_field(json_val, "IPAddr", IPAddr, __json_has_IPAddr)) break;
-        if (!decode_field(json_val, "PlatformID", PlatformID, __json_has_PlatformID)) break;
-        if (!decode_field(json_val, "remote", remote, __json_has_remote)) break;
-        if (!decode_field(json_val, "rnd", rnd, __json_has_rnd)) break;
-        if (!decode_field(json_val, "last_time", last_time, __json_has_last_time)) break;
-        if (!decode_field(json_val, "recv_pkts", recv_pkts, __json_has_recv_pkts)) break;
-        if (!decode_field(json_val, "sn", sn, __json_has_sn)) break;
-        if (!decode_field(json_val, "ssn", ssn, __json_has_ssn)) break;
-        if (!decode_field(json_val, "ssid1", ssid1, __json_has_ssid1)) break;
-        if (!decode_field(json_val, "ssid1pass", ssid1pass, __json_has_ssid1pass)) break;
-        if (!decode_field(json_val, "adminpass", adminpass, __json_has_adminpass)) break;
-        if (!decode_field(json_val, "dev_id", dev_id, __json_has_dev_id)) break;
-        if (!decode_field(json_val, "plan_id", plan_id, __json_has_plan_id)) break;
-
-        return true;
-    } while (0);
-
-    return false;
-}
-
-bool encode(const DevMap_t& obj_val, allocator_t& alloc, rapidjson::Value& json_val)
-{
-    return obj_val.encode(alloc, json_val);
-}
-
-bool decode(const rapidjson::Value& json_val, DevMap_t& obj_val)
 {
     return obj_val.decode(json_val);
 }
@@ -851,6 +727,91 @@ bool encode(const DispatcherVip_t& obj_val, allocator_t& alloc, rapidjson::Value
 }
 
 bool decode(const rapidjson::Value& json_val, DispatcherVip_t& obj_val)
+{
+    return obj_val.decode(json_val);
+}
+
+DispatcherStat_t::DispatcherStat_t()
+{
+    __skip_day = false;
+    __json_has_day = false;
+
+    statOk = 0;
+    __skip_statOk = false;
+    __json_has_statOk = false;
+
+    statOkE8c = 0;
+    __skip_statOkE8c = false;
+    __json_has_statOkE8c = false;
+
+    statErrSn = 0;
+    __skip_statErrSn = false;
+    __json_has_statErrSn = false;
+
+    statErrMd5 = 0;
+    __skip_statErrMd5 = false;
+    __json_has_statErrMd5 = false;
+}
+
+DispatcherStat_t& DispatcherStat_t::operator=(const DispatcherStat_t& obj_val)
+{
+    this->day = obj_val.day;
+    this->statOk = obj_val.statOk;
+    this->statOkE8c = obj_val.statOkE8c;
+    this->statErrSn = obj_val.statErrSn;
+    this->statErrMd5 = obj_val.statErrMd5;
+    return *this;
+}
+
+bool DispatcherStat_t::operator==(const DispatcherStat_t& obj_val) const
+{
+    if (!(this->day == obj_val.day)) return false;
+    if (!(this->statOk == obj_val.statOk)) return false;
+    if (!(this->statOkE8c == obj_val.statOkE8c)) return false;
+    if (!(this->statErrSn == obj_val.statErrSn)) return false;
+    if (!(this->statErrMd5 == obj_val.statErrMd5)) return false;
+    return true;
+}
+
+bool DispatcherStat_t::encode(allocator_t& alloc, rapidjson::Value& json_val) const
+{
+    do
+    {
+        json_val.SetObject();
+        if (!__skip_day && !encode_field(day, "day", alloc, json_val)) break;
+        if (!__skip_statOk && !encode_field(statOk, "statOk", alloc, json_val)) break;
+        if (!__skip_statOkE8c && !encode_field(statOkE8c, "statOkE8c", alloc, json_val)) break;
+        if (!__skip_statErrSn && !encode_field(statErrSn, "statErrSn", alloc, json_val)) break;
+        if (!__skip_statErrMd5 && !encode_field(statErrMd5, "statErrMd5", alloc, json_val)) break;
+
+        return true;
+    } while (0);
+
+    return false;
+}
+
+bool DispatcherStat_t::decode(const rapidjson::Value& json_val)
+{
+    do
+    {
+        if (!decode_field(json_val, "day", day, __json_has_day)) break;
+        if (!decode_field(json_val, "statOk", statOk, __json_has_statOk)) break;
+        if (!decode_field(json_val, "statOkE8c", statOkE8c, __json_has_statOkE8c)) break;
+        if (!decode_field(json_val, "statErrSn", statErrSn, __json_has_statErrSn)) break;
+        if (!decode_field(json_val, "statErrMd5", statErrMd5, __json_has_statErrMd5)) break;
+
+        return true;
+    } while (0);
+
+    return false;
+}
+
+bool encode(const DispatcherStat_t& obj_val, allocator_t& alloc, rapidjson::Value& json_val)
+{
+    return obj_val.encode(alloc, json_val);
+}
+
+bool decode(const rapidjson::Value& json_val, DispatcherStat_t& obj_val)
 {
     return obj_val.decode(json_val);
 }

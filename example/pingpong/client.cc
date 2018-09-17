@@ -1,5 +1,3 @@
-// Modified from https://github.com/chenshuo/muduo/blob/master/examples/pingpong/client.cc
-
 #include <tcp_client.h>
 #include <event_loop_thread_pool.h>
 #include <buffer.h>
@@ -41,10 +39,10 @@ public:
     }
 
 private:
-    void OnConnection(const evpp::TCPConnPtr& conn);
+    void OnConnection(const net::TCPConnPtr& conn);
 
-    void OnMessage(const evpp::TCPConnPtr& conn, evpp::Buffer* buf) {
-        LOG_TRACE << "bytes_read=" << bytes_read_ << " bytes_writen=" << bytes_written_;
+    void OnMessage(const net::TCPConnPtr& conn, net::Buffer* buf) {
+        LOG_DEBUG("bytes_read:%u bytes_writen:%d", bytes_read_, bytes_written_);
         ++messages_read_;
         bytes_read_ += buf->size();
         bytes_written_ += buf->size();
@@ -52,7 +50,7 @@ private:
     }
 
 private:
-    evpp::TCPClient client_;
+    net::TCPClient client_;
     Client* owner_;
     int64_t bytes_read_;
     int64_t bytes_written_;
@@ -61,7 +59,7 @@ private:
 
 class Client {
 public:
-    Client(evpp::EventLoop* loop,
+    Client(net::EventLoop* loop,
            const std::string& serverAddr, // ip:port
            int blockSize,
            int sessionCount,
@@ -71,8 +69,8 @@ public:
         session_count_(sessionCount),
         timeout_(timeout_sec),
         connected_count_(0) {
-        loop->RunAfter(evpp::Duration(double(timeout_sec)), std::bind(&Client::HandleTimeout, this));
-        tpool_.reset(new evpp::EventLoopThreadPool(loop, threadCount));
+        loop->RunAfter(net::Duration(double(timeout_sec)), std::bind(&Client::HandleTimeout, this));
+        tpool_.reset(new net::EventLoopThreadPool(loop, threadCount));
         tpool_->Start(true);
 
         for (int i = 0; i < blockSize; ++i) {
@@ -97,13 +95,13 @@ public:
 
     void OnConnect() {
         if (++connected_count_ == session_count_) {
-            LOG_WARN << "all connected";
+            LOG_WARN("all connected");
         }
     }
 
-    void OnDisconnect(const evpp::TCPConnPtr& conn) {
+    void OnDisconnect(const net::TCPConnPtr& conn) {
         if (--connected_count_ == 0) {
-            LOG_WARN << "all disconnected";
+            LOG_WARN("all disconnected");
 
             int64_t totalBytesRead = 0;
             int64_t totalMessagesRead = 0;
@@ -111,39 +109,40 @@ public:
                 totalBytesRead += it->bytes_read();
                 totalMessagesRead += it->messages_read();
             }
-            LOG_WARN << totalBytesRead << " total bytes read";
-            LOG_WARN << totalMessagesRead << " total messages read";
-            LOG_WARN << static_cast<double>(totalBytesRead) / static_cast<double>(totalMessagesRead)
-                << " average message size";
-            LOG_WARN << static_cast<double>(totalBytesRead) / (timeout_ * 1024 * 1024)
-                << " MiB/s throughput";
+            LOG_WARN("%u total bytes read",totalBytesRead);
+            LOG_WARN("%u total messages read",totalMessagesRead);
+            LOG_WARN("%f average message size",static_cast<double>(totalBytesRead) / static_cast<double>(totalMessagesRead));
+            LOG_WARN("%f MiB/s throughput",static_cast<double>(totalBytesRead) / (timeout_ * 1024 * 1024));
             loop_->QueueInLoop(std::bind(&Client::Quit, this));
         }
     }
 
 private:
     void Quit() {
+        LOG_DEBUG("Quit");
         tpool_->Stop();
-        loop_->Stop();
         for (auto &it : sessions_) {
             delete it;
         }
         sessions_.clear();
-        while (!tpool_->IsStopped() || !loop_->IsStopped()) {
+        while (!tpool_->IsStopped()) {
             std::this_thread::sleep_for(std::chrono::seconds(1));
         }
         tpool_.reset();
+
+        LOG_DEBUG("loop stop");
+        loop_->Stop();
     }
 
     void HandleTimeout() {
-        LOG_WARN << "stop";
+        LOG_WARN("stop");
         for (auto &it : sessions_) {
             it->Stop();
         }
     }
 private:
-    evpp::EventLoop* loop_;
-    std::shared_ptr<evpp::EventLoopThreadPool> tpool_;
+    net::EventLoop* loop_;
+    std::shared_ptr<net::EventLoopThreadPool> tpool_;
     int session_count_;
     int timeout_;
     std::vector<Session*> sessions_;
@@ -151,7 +150,7 @@ private:
     std::atomic<int> connected_count_;
 };
 
-void Session::OnConnection(const evpp::TCPConnPtr& conn) {
+void Session::OnConnection(const net::TCPConnPtr& conn) {
     if (conn->IsConnected()) {
         conn->SetTCPNoDelay(true);
         conn->Send(owner_->message());
@@ -167,6 +166,8 @@ int main(int argc, char* argv[]) {
         return -1;
     }
 
+    LOG_INIT(NULL, NULL, true, DEBUG);
+
     const char* ip = argv[1];
     uint16_t port = static_cast<uint16_t>(atoi(argv[2]));
     int threadCount = atoi(argv[3]);
@@ -174,7 +175,7 @@ int main(int argc, char* argv[]) {
     int sessionCount = atoi(argv[5]);
     int timeout = atoi(argv[6]);
 
-    evpp::EventLoop loop;
+    net::EventLoop loop;
     std::string serverAddr = std::string(ip) + ":" + std::to_string(port);
 
     Client client(&loop, serverAddr, blockSize, sessionCount, timeout, threadCount);

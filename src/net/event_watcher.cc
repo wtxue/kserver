@@ -59,7 +59,7 @@ bool EventWatcher::Watch(Duration timeout) {
     }
 
     if (attached_) {    
-	    DLOG_TRACE("attached_ Watch fd=%d",this->event_->ev_fd);
+	    DLOG_TRACE("attached_ Watch fd:%d",this->event_->ev_fd);
 	    
         // When InvokerTimer::periodic_ == true, EventWatcher::Watch will be called many times
         // so we need to remove it from event_base before we add it into event_base

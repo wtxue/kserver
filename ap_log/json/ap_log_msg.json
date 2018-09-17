@@ -9,26 +9,7 @@
                 ["string", "Ack", "Heartbeat"],
                 ["string", "ID"]
             ]
-        },      
-        {
-            "type": "ap_log_db_t",
-            "members": 
-            [
-                ["string", "RPCMethod"],
-                ["string", "ID"],
-                ["string", "mac"],
-                ["string", "server"],
-                ["string", "remote"],
-                ["string", "start_time"],
-                ["string", "end_time"],
-                ["string", "client_ip"],
-                ["int32_t", "direction"],
-                ["int32_t", "Result"],
-                ["uint64_t", "addtime"],
-                ["string", "in"],
-                ["string", "out"]
-            ]
-        }, 
+        },   
         {
             "type": "params_in_t",
             "members": 

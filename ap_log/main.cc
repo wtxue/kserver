@@ -1,3 +1,4 @@
+#include <signal.h> 
 #include "tcp_server.h"
 #include "buffer.h"
 #include "tcp_conn.h"
@@ -27,130 +28,29 @@ using namespace sqdb;
 using namespace sdbclient;
 using namespace bson;
 
-void ap_log_db_qos_conf_index(sdbclient::sdbCollection& cl) {
-	slothjson::index_param_time_t idx;
-	string obj;	
-    BSONObj obj_;
 
-	idx.skip_index_name();
-	int rc = slothjson::encode<false, slothjson::index_param_time_t>(idx, obj);	
-	if (!rc) {
-		LOG_ERROR("decode index_param_time_t err");
-		return ;
-	}
-
-    rc = fromjson(obj, obj_);
-    if (rc) {
-		LOG_ERROR("Failed to fromjson, rc:%d", rc) ;
-		return ;
-	}
-	
-	rc = cl.createIndex(obj_, idx.index_name.c_str(), FALSE, FALSE) ;
-	if ( rc ) {
-		LOG_ERROR( "Failed to create index index_addTime, rc:%d\n", rc ) ;
-	}
-
-	LOG_DEBUG("index_name:%s obj:%s ok",idx.index_name.c_str(),obj.c_str());
-}
-
-void ap_log_db_qos_vip_conf_index(sdbCollection& cl) {
-	slothjson::index_mac_t idx;
-	string obj;	
-    BSONObj obj_;
-
-	idx.skip_index_name();
-	int rc = slothjson::encode<false, slothjson::index_mac_t>(idx, obj);	
-	if (!rc) {
-		LOG_ERROR("decode index_param_time_t err");
-		return ;
-	}
-
-
-    rc = fromjson(obj, obj_);
-    if (rc) {
-		LOG_ERROR("Failed to fromjson, rc:%d", rc) ;
-		return ;
-	}
-	
-	rc = cl.createIndex(obj_, idx.index_name.c_str(), FALSE, FALSE) ;
-	if ( rc ) {
-		LOG_ERROR( "Failed to create index index_addTime, rc:%d\n", rc ) ;
-	}
-
-	LOG_DEBUG("index_name:%s obj:%s ok",idx.index_name.c_str(),obj.c_str());
+void test_test() {
 }
 
 
-void ap_log_db_dev_index(sdbCollection& cl) {
-	slothjson::index_mac_RPCMethod_t idx_mac_RPCMethod;
-	slothjson::index_ID_t idx_ID;
-	slothjson::index_addtime_t idx_addtime;
-	string obj;	
-    BSONObj obj_;
 
-	idx_mac_RPCMethod.skip_index_name();
-	int rc = slothjson::encode<false, slothjson::index_mac_RPCMethod_t>(idx_mac_RPCMethod, obj);	
-	if (!rc) {
-		LOG_ERROR("decode index_param_time_t err");
-		return ;
+void SignalUsr1Hander() {
+	LOG_DEBUG("catch SIGUSR1");
+	ring_log *plog = ring_log::ins();
+
+	auto level = plog->get_level();
+	if (level == TRACE) {
+		LOG_INFO("change level TRACE to DEBUG");
+		plog->set_level(DEBUG);
 	}
 
-    rc = fromjson(obj, obj_);
-    if (rc) {
-		LOG_ERROR("Failed to fromjson, rc:%d", rc) ;
-		return ;
+	if (level == DEBUG) {
+		LOG_INFO("change level DEBUG to TRACE");
+		plog->set_level(TRACE);
 	}
-	
-	rc = cl.createIndex(obj_, idx_mac_RPCMethod.index_name.c_str(), FALSE, FALSE) ;
-	if ( rc ) {
-		LOG_ERROR( "Failed to create index index_addTime, rc:%d\n", rc ) ;
-	}
-	
-	LOG_ERROR("index_name:%s obj:%s ok",idx_mac_RPCMethod.index_name.c_str(),obj.c_str());
-
-	idx_ID.skip_index_name();
-	rc = slothjson::encode<false, slothjson::index_ID_t>(idx_ID, obj);	
-	if (!rc) {
-		LOG_ERROR("decode index_param_time_t err");
-		return ;
-	}
-
-    rc = fromjson(obj, obj_);
-    if (rc) {
-		LOG_ERROR("Failed to fromjson, rc:%d", rc) ;
-		return ;
-	}
-	
-	rc = cl.createIndex(obj_, idx_ID.index_name.c_str(), FALSE, FALSE) ;
-	if ( rc ) {
-		LOG_ERROR( "Failed to create index index_addTime, rc:%d\n", rc ) ;
-	}
-	
-	LOG_DEBUG("index_name:%s obj:%s ok",idx_ID.index_name.c_str(),obj.c_str());
-
-	idx_addtime.skip_index_name();
-	rc = slothjson::encode<false, slothjson::index_addtime_t>(idx_addtime, obj);	
-	if (!rc) {
-		LOG_ERROR("decode index_param_time_t err");
-		return ;
-	}
-
-    rc = fromjson(obj, obj_);
-    if (rc) {
-		LOG_ERROR("Failed to fromjson, rc:%d", rc) ;
-		return ;
-	}
-	
-	rc = cl.createIndex(obj_, idx_addtime.index_name.c_str(), FALSE, FALSE) ;
-	if ( rc ) {
-		LOG_ERROR( "Failed to create index index_addTime, rc:%d\n", rc ) ;
-	}
-	
-	LOG_DEBUG("index_name:%s obj:%s ok",idx_addtime.index_name.c_str(),obj.c_str());	
 }
 
 int sqdbInit() {
-	string dbPoolName = "ap_log";
 	sqdbCl* pDBCl = nullptr;
 	sqdbPool* pool = nullptr;
 
@@ -161,44 +61,30 @@ int sqdbInit() {
 		return -1;
 	}
 
-	pool = sqdbManager::getIns()->GetDbPool(dbPoolName);
+	pool = sqdbManager::getIns()->GetDbPool();
 	if (!pool) {
 		LOG_ERROR("dbManager get pool err");
-		return -1;
+		return -2;
 	}
 	LOG_DEBUG("GetDbPool get ok:%p",pool);
 
-	//ap_log_20180702.ap_log_dev
-	pDBCl = new sqdbCl(pool, "ap_log","ap_log_dev",24);
-	pDBCl->SetCreateIndexCallback(&ap_log_db_dev_index);
-	if (pDBCl->Init())  {
-		LOG_ERROR("init sqdbCl ap_log_20180702 fail");
-		return -2;
+	auto cl = config_reader::ins()->GetStringList("sqdb", "cl");
+	for (size_t i = 0; i < cl.size(); i++) {
+		auto flag = config_reader::ins()->GetNumber(cl[i], "flag", 0);
+		auto index = config_reader::ins()->GetStringList(cl[i], "index");
+		LOG_DEBUG("i:%d cl:%s flag:%d,index.size():%d", i, cl[i].c_str(), flag, index.size());
+		pDBCl = new sqdbCl(pool, cl[i], flag);
+		if (index.size())
+			pDBCl->PushAllIndex(index);
+
+		if (pDBCl->Init())	{
+			LOG_ERROR("init sqdbCl:%s fail",cl[i].c_str());
+			return -3;
+		}		
+		pool->PutDbCl(pDBCl->GetclMapName(),pDBCl);	
+		LOG_DEBUG("Init cl:%p name:%s ok",pDBCl,pDBCl->GetclFullName().c_str());	
 	}
-	pool->PutDbCl(pDBCl->GetclMapName(),pDBCl);	
-	LOG_DEBUG("Init cl name:%s ok",pDBCl->GetclFullName().c_str());	
-
-	//ap_config.config
-	pDBCl = new sqdbCl(pool, "ap_config","config");
-	pDBCl->SetCreateIndexCallback(&ap_log_db_qos_conf_index);
-	if (pDBCl->Init())  {
-		LOG_ERROR("init sqdbCl ap_config.config fail");
-		return -3;
-	}
-
-	pool->PutDbCl(pDBCl->GetclMapName(),pDBCl);
-	LOG_DEBUG("Init cl name:%s ok",pDBCl->GetclFullName().c_str());
-
-	//ap_config.log_qos_vip
-	pDBCl = new sqdbCl(pool, "ap_config","log_qos_vip");
-	pDBCl->SetCreateIndexCallback(&ap_log_db_qos_conf_index);
-	if (pDBCl->Init())  {
-		LOG_ERROR("init sqdbCl ap_config.log_qos_vip fail");
-		return -4;
-	}
-
-	pool->PutDbCl(pDBCl->GetclMapName(),pDBCl);
-	LOG_DEBUG("Init cl name:%s ok",pDBCl->GetclFullName().c_str());
+	
 	return 0;
 }
 
@@ -220,25 +106,38 @@ void logInit() {
 }
 
 int main(int argc, char* argv[]) {
-    if (argc != 1 && argc != 3) {
-        printf("Usage: %s config\n", argv[0]);
-        printf("  e.g: %s conf.ini\n", argv[0]);
+    if (argc < 2) {
+        printf("Usage: %s config.ini\n", argv[0]);
+        printf("  exp: %s ./config.ini\n", argv[0]);
         return 0;
     }
 
-    config_reader::setPath("myconf.ini");
+	printf("\nconf path: %s\n", argv[1]);
+	if (!config_reader::setPath(argv[1])) {
+		printf("load path: %s Failed, please check your config\n", argv[1]);
+		return 0;
+	}
+
     // must first init log
 	logInit();
 
     LOG_INFO("sqdbInit Start first /////////"); 
-	sqdbInit();
+	if (sqdbInit() < 0) {
+		printf("sqdbInit Failed, please check your config\n");
+		return 0;
+	}
 
     net::EventLoop base_loop;  
     apLogServer server(&base_loop);
     server.Init();
 
-    LOG_INFO("base loop Start /////////"); 
-	//base_loop.RunAfter(net::Duration(10.0), &test_test);
+    LOG_INFO("base loop Start init SIGUSR1 /////////"); 
+	std::unique_ptr<net::SignalEventWatcher> ev(new net::SignalEventWatcher(SIGUSR1, &base_loop, &SignalUsr1Hander));
+	ev->Init();
+    ev->AsyncWait();
+	
+	LOG_INFO("base loop Start /////////"); 
+	//base_loop.RunAfter(net::Duration(5.0), &test_test);
     base_loop.Run();    
     return 0;
 }

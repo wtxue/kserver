@@ -19,4 +19,4 @@ $(TARGETS): $(BASE_OBJS)
 	@$(CPP) -c $(CXXFLAGS) $(BASE_INCLS) $(SQDB_INCLS) $< -o $@ 
 
 clean:
-	-rm -f *.o *.d $(BASE_OBJS) $(TARGETS) 
+	-rm -f *.o $(BASE_OBJS) $(TARGETS) 

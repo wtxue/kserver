@@ -96,7 +96,7 @@ void EventLoop::Run() {
 
     // Make sure watcher_ does construct, initialize and destruct in the same thread.
     watcher_.reset();
-    DLOG_TRACE("EventLoop stopped, tid=%lu",std::this_thread::get_id());
+    DLOG_TRACE("EventLoop stopped, tid:%lu",std::this_thread::get_id());
 
     status_.store(kStopped);
 }
@@ -105,7 +105,7 @@ void EventLoop::Stop() {
     DLOG_TRACE("stop");
     assert(status_.load() == kRunning);
     status_.store(kStopping);
-    DLOG_TRACE("EventLoop::Stop");
+    DLOG_TRACE("EventLoop Stop");
     QueueInLoop(std::bind(&EventLoop::StopInLoop, this));
 }
 
@@ -115,7 +115,7 @@ void EventLoop::StopInLoop() {
 
     auto f = [this]() {
         for (int i = 0;;i++) {
-            DLOG_TRACE("calling DoPendingFunctors index=%d",i);
+            DLOG_TRACE("calling DoPendingFunctors index:%d",i);
             DoPendingFunctors();
             if (IsPendingQueueEmpty()) {
                 break;
@@ -260,7 +260,7 @@ void EventLoop::QueueInLoop(const Functor& cb) {
 }
 
 void EventLoop::QueueInLoop(Functor&& cb) {
-    DLOG_TRACE("pending_functor_count_=%d PendingQueueSize=%d notified_=%d",
+    DLOG_TRACE("pending_functor_count_:%d PendingQueueSize:%d notified_:%d",
     			pending_functor_count_.load(), GetPendingQueueSize(),notified_.load());
     {
 #ifdef H_HAVE_BOOST
@@ -282,7 +282,7 @@ void EventLoop::QueueInLoop(Functor&& cb) {
 			DLOG_TRACE("call watcher_->Nofity() notified_.store(true)");
             watcher_->Notify();
         } else {
-            DLOG_TRACE("watcher_ is empty, maybe we call EventLoop::QueueInLoop on a stopped EventLoop. status=%s",StatusToString().c_str());
+            DLOG_TRACE("watcher_ is empty, maybe we call EventLoop::QueueInLoop on a stopped EventLoop. status:%s",StatusToString().c_str());
             assert(!IsRunning());
         }
     } else {

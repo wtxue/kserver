@@ -17,34 +17,58 @@ namespace sqdb {
 
 sqdbManager* sqdbManager::_sqdbManager = NULL;
 
-inline void DefaultCreateIndexCallback(const sdbCollection& conn) {
-	DB_TRACE("DefaultCreateIndexCallback");
+bool SplitCsClName(const std::string& clMapName, std::string& CsName, std::string& ClName) {
+    if (clMapName.empty()) {
+        return false;
+    }
+
+    size_t index = clMapName.rfind('.');
+    if (index == std::string::npos) {
+        DB_ERROR("FullName specified error <%s>. Cannot find '.'", clMapName.c_str());
+        return false;
+    }
+
+    if (index == clMapName.size() - 1) {
+		DB_ERROR("FullName error <%s> to end", clMapName.c_str());
+        return false;
+    }
+    
+	CsName = clMapName.substr(0,index);
+	ClName = clMapName.substr(index + 1);
+
+	DB_DEBUG("Split CsName:%s ClName:%s", CsName.c_str(), ClName.c_str());
+    return true;
 }
 
-sqdbCl::sqdbCl(sqdbPool* pDBPool, const string &csName, const string &clName) {
+sqdbCl::sqdbCl(sqdbPool* pDBPool, const char* clFullName, long flag) {
 	_isCreate = false;
 	_flag = 0;
-	_csName = csName;
-	_csNameHead = csName;
-	_clName = clName;
-	_clMapName = _csName + "." + _clName;
-	_clFullName = _clMapName;
+	_clMapName = clFullName;
+	SplitCsClName(_clMapName,_csNameHead,_clName);
+	GetLoopCsName(_csName, _csNameHead, flag, 0);
+	_clFullName = _csName + "." + _clName;
+
+	_flag = flag;
 	_pDBPool = pDBPool;
-	SetCreateIndexCallback(&DefaultCreateIndexCallback);
-	DB_DEBUG("_pDBPool:%p _clFullName:%s _clMapName:%s", _pDBPool, _clFullName.c_str(), _clMapName.c_str());
+	DB_DEBUG("_pDBPool:%p _clFullName:%s _clMapName:%s _flag:%d", _pDBPool, _clFullName.c_str(), _clMapName.c_str(), _flag);	
+	DB_DEBUG("_csName:%s _clName:%s _flag:%d", _csName.c_str(), _clName.c_str(), _flag);
 }
 
-sqdbCl::sqdbCl(sqdbPool* pDBPool, const char *csName, const char *clName) {
+sqdbCl::sqdbCl(sqdbPool* pDBPool, const string &clFullName, long flag) {
 	_isCreate = false;
 	_flag = 0;
-	_csName = csName;	
-	_csNameHead = csName;
-	_clName = clName;
-	_clMapName = _csName + "." + _clName;
-	_clFullName = _clMapName;
+	_clMapName = clFullName;
+	SplitCsClName(_clMapName,_csNameHead,_clName);
+	GetLoopCsName(_csName, _csNameHead, flag, 0);
+	_clFullName = _csName + "." + _clName;
+
+	_flag = flag;
 	_pDBPool = pDBPool;
-	SetCreateIndexCallback(&DefaultCreateIndexCallback);
-	DB_DEBUG("_pDBPool:%p _clFullName:%s _clMapName:%s", _pDBPool, _clFullName.c_str(), _clMapName.c_str());
+	DB_DEBUG("_pDBPool:%p _clFullName:%s _clMapName:%s _flag:%d", _pDBPool, _clFullName.c_str(), _clMapName.c_str(), _flag);	
+	DB_DEBUG("_csName:%s _clName:%s _flag:%d", _csName.c_str(), _clName.c_str(), _flag);
+}
+
+sqdbCl::~sqdbCl() {
 }
 
 void sqdbCl::GetLoopCsName(string &trueCsName, string &csNameHead, long flag, int isNext) {
@@ -72,42 +96,7 @@ void sqdbCl::GetLoopCsName(string &trueCsName, string &csNameHead, long flag, in
 		trueCsName = csNameHead;
 	}
 
-	DB_DEBUG("get trueCsName:%s",trueCsName.c_str());
-}
-
-sqdbCl::sqdbCl(sqdbPool* pDBPool, const string &csName, const string &clName, long flag) {
-	_isCreate = false;	
-	_flag = 0;
-	_csNameHead = csName;
-	_clName = clName;
-	_clMapName = _csNameHead + "." + _clName;
-	
-	GetLoopCsName(_csName, _csNameHead, flag, 0);
-	_clFullName = _csName + "." + _clName;
-
-	_flag = flag;
-	_pDBPool = pDBPool;
-	SetCreateIndexCallback(&DefaultCreateIndexCallback);
-	DB_DEBUG("_pDBPool:%p _clFullName:%s _clMapName:%s", _pDBPool, _clFullName.c_str(), _clMapName.c_str());
-}
-
-sqdbCl::sqdbCl(sqdbPool* pDBPool, const char *csName, const char *clName, long flag) {
-	_isCreate = false;
-	_flag = 0;
-	_csNameHead = csName;
-	_clName = clName;
-	_clMapName = _csNameHead + "." + _clName;
-
-	GetLoopCsName(_csName, _csNameHead, flag, 0);
-	_clFullName = _csName + "." + _clName;
-
-	_flag = flag;
-	_pDBPool = pDBPool;
-	SetCreateIndexCallback(&DefaultCreateIndexCallback);
-	DB_DEBUG("_pDBPool:%p _clFullName:%s _clMapName:%s", _pDBPool, _clFullName.c_str(), _clMapName.c_str());
-}
-
-sqdbCl::~sqdbCl() {
+	//DB_DEBUG("get trueCsName:%s",trueCsName.c_str());
 }
 
 void sqdbCl::UpdateLoopCsName() {
@@ -164,11 +153,36 @@ int sqdbCl::Init(string& csName,string& clName) {
             goto error;
         }
 
-		if (_index_fn) {
-			DB_DEBUG("start create index fn");
-			_index_fn(cl);
-		}
-		
+		if (!_indexs.empty()) {
+			DB_DEBUG("start create index _indexs");
+			BSONObj bIndex;
+			BSONObj indexDef;
+			string pName;
+			int isUnique;
+			int isEnforced;
+			
+			for (size_t i = 0; i < _indexs.size(); i++) {
+				DB_DEBUG("i:%d index:%s ", i, _indexs[i].c_str());
+				rc = fromjson(_indexs[i], bIndex);
+				if (rc) {
+					LOG_ERROR("fromjson err rc:%d index:%s ",rc, _indexs[i].c_str());
+					goto error;
+				}
+				
+				indexDef = bIndex.getObjectField("indexDef");				
+				pName = bIndex.getStringField("pName");
+				isUnique = bIndex.getIntField("isUnique");				
+				isEnforced = bIndex.getIntField("isEnforced");
+				rc = cl.createIndex(indexDef, pName.c_str(), isUnique, isEnforced) ;
+				if (rc)  {
+					DB_ERROR("createIndex Failed rc:%d,pName:%s,indexDef:%s,isUnique:%d,isEnforced:%d", 
+							rc, pName.c_str(), indexDef.toString().c_str(), isUnique, isEnforced);
+					goto error;
+				}
+				DB_DEBUG("createIndex ok pName:%s,indexDef:%s,isUnique:%d,isEnforced:%d",
+							pName.c_str(),indexDef.toString().c_str(),isUnique,isEnforced);
+			}
+		}	
         DB_DEBUG("Successfully created new collection:%s", clFullName.c_str());
     }
     else if (rc) {
@@ -186,15 +200,14 @@ error:
 }
 
 int sqdbCl::Init() {	
-	Init(_csName,_clName);
+	int rc = Init(_csName,_clName);
 	if (_flag > 0) {
-		DB_DEBUG("enter init next CsName");
 		string calcNextCsName;	
 		GetLoopCsName(calcNextCsName, _csNameHead, _flag, 1);
-		Init(calcNextCsName, _clName);
+		rc = Init(calcNextCsName, _clName);
 	}
 
-	return 0;
+	return rc;
 }
 
 int sqdbCl::GetDsCl(sdb *& conn,sdbCollection& cl) {
@@ -303,7 +316,7 @@ int sqdbCl::query(const string &condition, string &obj) {
 		goto error;
 	}
 	
-    DB_DEBUG("condition:%s query:%s", condition.c_str(), obj_.toString().c_str()) ;
+    DB_TRACE("condition:%s query:%s", condition.c_str(), obj_.toString().c_str()) ;
     obj = obj_.toString();
     
 error:
@@ -312,19 +325,19 @@ error:
 }
 
 int sqdbCl::insert(const string &obj) {	
-	sdb * conn;
+	sdb * conn = nullptr;
 	sdbCollection cl;
     BSONObj oneObj;
 	int rc = SDB_OK ;
 
-	//DB_TRACE("fromjson");
+	//DB_TRACE("before fromjson");
     rc = fromjson(obj, oneObj);
     if (rc) {
 		DB_ERROR("Failed to fromjson, rc:%d", rc) ;
 		return rc;
 	}
 
-	//DB_TRACE("GetDsCl");
+	//DB_TRACE("after fromjson");
 	rc = GetDsCl(conn,cl);
 	if (rc) {
 		DB_ERROR("Failed to GetDsCl, rc:%d", rc) ;
@@ -338,12 +351,90 @@ int sqdbCl::insert(const string &obj) {
 		goto error;
 	}
 
-    //DB_TRACE("insert ok");
+	//DB_TRACE("after insert");
 error:
 	_pDBPool->ReleaseDsConn(conn);
 	return rc;
 }
 
+int sqdbCl::upsert(const string &obj, const string &condition) {
+	INT32 rc = SDB_OK;
+	sdb * conn;
+	sdbCollection cl;
+	sdbCursor cursor;
+	BSONObj condition_;
+	BSONObj obj_;
+
+	DB_TRACE("before upsert");
+	rc = fromjson(condition, condition_);
+	if (rc) {
+		DB_ERROR("Failed to fromjson, rc:%d", rc) ;
+		return rc;
+	}
+
+    rc = fromjson(obj, obj_);
+    if (rc) {
+		DB_ERROR("Failed to fromjson, rc:%d", rc) ;
+		return rc;
+	}
+
+	rc = GetDsCl(conn,cl);
+	if (rc) {
+		DB_ERROR("Failed to GetDsCl, rc:%d", rc) ;
+		return rc;
+	}
+	
+    rc = cl.upsert(obj_,condition_);
+    if (rc) {
+		DB_ERROR("Failed to upsert, rc:%d", rc) ;
+		goto error;
+	}
+	
+	DB_TRACE("after upsert",obj.c_str());
+error:
+	_pDBPool->ReleaseDsConn(conn);	  
+	return rc;
+}
+
+int sqdbCl::del(const string &cd,const string &hint) {
+	sdb * conn;
+	sdbCollection cl;
+	BSONObj cdObj;
+	BSONObj hintObj;
+	int rc = SDB_OK ;
+
+	//DB_TRACE("before fromjson");
+	rc = fromjson(cd, cdObj);
+	if (rc) {
+		DB_ERROR("Failed to fromjson cdObj, rc:%d", rc) ;
+		return rc;
+	}
+	
+	rc = fromjson(hint, hintObj);
+	if (rc) {
+		DB_ERROR("Failed to fromjson hintObj, rc:%d", rc) ;
+		return rc;
+	}
+
+	//DB_TRACE("after fromjson");
+	rc = GetDsCl(conn,cl);
+	if (rc) {
+		DB_ERROR("Failed to GetDsCl, rc:%d", rc) ;
+		return rc;
+	}
+
+	//DB_TRACE("del");
+	rc = cl.del(cdObj,hintObj);
+	if (rc) {
+		DB_ERROR("Failed to del, rc:%d", rc) ;
+		goto error;
+	}
+
+	//DB_TRACE("after del");
+error:
+	_pDBPool->ReleaseDsConn(conn);
+	return rc;
+}
 
 sqdbPool::sqdbPool(const string& poolName, const string& host, const string& port,
 		const string& user, const string& pwd, const string& dbName, int connectNum) {
@@ -377,7 +468,7 @@ sqdbPool::sqdbPool(const string& poolName, const string& host, const string& por
     /* 设置使用coord地址负载均衡的策略获取连接。默认值为DS_STY_BALANCE。 */
     _conf.setConnectStrategy(DS_STY_BALANCE);
     /* 连接出池时，是否检测连接的可用性，默认值为FALSE。 */
-    _conf.setValidateConnection(TRUE);
+    _conf.setValidateConnection(FALSE);
     /* 设置连接是否开启SSL功能，默认值为FALSE。 */
     _conf.setUseSSL(FALSE);
 }
@@ -481,7 +572,6 @@ int sqdbPool::dropCollectionSpace(const string& csName) {
 }
 
 sqdbCl* sqdbPool::GetDbCl(const string& clMapName) {
-	//std::map<string, sqdbCl*>::iterator it = _mapCl.find(clMapName);
 	auto it = _mapCl.find(clMapName);
 	if (it == _mapCl.end()) {
 		return NULL;
@@ -535,7 +625,6 @@ int sqdbManager::Init() {
 }
 
 sqdbPool* sqdbManager::GetDbPool(const string& dbPoolName) {
-	//std::map<string, sqdbPool*>::iterator it = _mapPool.find(dbPoolName);
 	auto it = _mapPool.find(dbPoolName);
 	if (it == _mapPool.end()) {
 		return NULL;

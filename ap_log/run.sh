@@ -3,6 +3,6 @@
 # core dump 
 ulimit -c unlimited
 
-./dispatcher ./dispatcher.ini & 
+./ap_log ./ap_log.ini & 
 
 

@@ -1,0 +1,99 @@
+{
+    "structs": 
+    [
+        {
+            "type": "Heartbeat_t",
+            "members": 
+            [
+                ["int32_t", "Result"],
+                ["string", "Ack", "Heartbeat"],
+                ["string", "ID"]
+            ]
+        },   
+        {
+            "type": "params_in_t",
+            "members": 
+            [
+                ["string", "RPCMethod"],
+                ["string", "ID"],
+                ["string", "Plugin_Name"],
+                ["string", "Time"],
+                ["string", "Message"]
+            ]
+        },
+        {
+            "type": "params_out_t",
+            "members": 
+            [
+                ["int32_t", "Result"],
+                ["string", "Ack"],
+                ["string", "ID"],
+                ["string", "return_Parameter"]                
+            ]
+        },    
+        {
+            "type": "params_t",
+            "members": 
+            [
+                ["string", "MAC"],
+                ["string", "DevID"],
+                ["string", "remote"],
+                ["string", "Vendor"],
+                ["string", "Model"],
+                ["string", "HardwareVer"],
+                ["string", "FirmwareVer"],
+                ["string", "SN"],
+                ["string", "CloudClientVer"],
+                ["string", "MiddleWareVer"],
+                ["string", "MiddleWareBakVer"],
+                ["string", "IPAddr"],
+                ["string", "PlatformID"],
+                ["string", "LOID"],
+                ["string", "province"],
+                ["string", "city"],
+                ["uint64_t", "time"]
+            ]
+        },  
+        {
+            "type": "onoffline_t",
+            "members": 
+            [
+                ["string", "RPCMethod"],
+                ["string", "ID"],
+                ["params_t", "params"]
+            ]
+        },
+        {
+            "type": "PluginNotification_t",
+            "members": 
+            [
+                ["string", "RPCMethod"],
+                ["string", "ID"],
+                ["string", "Plugin_Name"],
+                ["string", "Version"],
+                ["string", "Time"],
+                ["string", "Message"]
+            ]
+        },
+        {
+            "type": "SetPluginParams_t",
+            "members": 
+            [
+                ["int32_t", "Result"],
+                ["string", "Ack"],
+                ["string", "return_Parameter"],
+                ["string", "ID"],
+                ["string", "MAC"]
+            ]
+        },
+        {
+            "type": "cmd_t",
+            "members": 
+            [
+                ["string", "RPCMethod"],
+                ["string", "ID"],
+                ["string", "Ack"]
+            ]
+        }
+    ]
+}

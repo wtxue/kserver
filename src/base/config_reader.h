@@ -14,6 +14,7 @@ public:
     ~config_reader();
     std::string GetString(const std::string& section, const std::string& key, const std::string& default_value = "");
     std::vector<std::string> GetStringList(const std::string& section, const std::string& key);
+	std::vector<std::string> GetStringList2(const std::string& section,const std::string& key);
     unsigned GetNumber(const std::string& section, const std::string& key, unsigned default_value = 0);
     bool GetBool(const std::string& section, const std::string& key, bool default_value = false);
     float GetFloat(const std::string& section, const std::string& key, const float& default_value);

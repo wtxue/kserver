@@ -19,6 +19,8 @@ using namespace slothjson;
 
 namespace ap_log {
 
+#define LOG_LOOP_CHECK_HEAD  "ap_log"
+
 class MsgString;
 typedef std::shared_ptr<MsgString> MsgStringPtr;
 
@@ -69,7 +71,7 @@ public:
 		
 		MacVipMap::iterator it = macVip_.find(mac);
 		if (it == macVip_.end()) {
-			//LOG_TRACE("not find mac:%s",mac.c_str());
+			LOG_TRACE("not find mac:%s use config_deviceLogStatus",mac.c_str(),config_deviceLogStatus_);
 			return config_deviceLogStatus_;
 		} else {
 			return it->second->loglev;

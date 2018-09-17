@@ -39,7 +39,7 @@ int EventAdd(struct event* ev, const struct timeval* timeout) {
             assert("event_add twice");
         }
     }
-    //LOG_DEBUG("EventAdd ev:%p fd:%d user_ptr:%p tid:%lu",ev,ev->ev_fd,ev->ev_arg,std::this_thread::get_id());
+    //LOG_TRACE("EventAdd ev:%p fd:%d user_ptr:%p tid:%lu",ev,ev->ev_fd,ev->ev_arg,std::this_thread::get_id());
 #endif
     return event_add(ev, timeout);
 }
@@ -61,7 +61,7 @@ int EventDel(struct event* ev) {
             evmap.erase(it);
         }
     }
-    //LOG_DEBUG("EventDel ev:%p fd:%d user_ptr:%p tid:%lu",ev,ev->ev_fd,ev->ev_arg,std::this_thread::get_id());
+    //LOG_TRACE("EventDel ev:%p fd:%d user_ptr:%p tid:%lu",ev,ev->ev_fd,ev->ev_arg,std::this_thread::get_id());
 #endif
     return event_del(ev);
 }

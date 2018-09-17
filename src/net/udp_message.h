@@ -6,7 +6,8 @@
 
 namespace net {
 
-
+// TODO
+//class UDPMessage : public Buffer, public std::enable_shared_from_this<UDPMessage> {
 class UDPMessage : public Buffer {
 public:
     UDPMessage(net_socket_t fd, size_t buffer_size = 1472)

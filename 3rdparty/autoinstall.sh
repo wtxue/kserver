@@ -16,4 +16,16 @@ if [ ! -f libevent_install/lib/libevent.a ]; then
 	make install
 fi
 
+if [ ! -f librdkafka_install ]; then
+	if [ ! -f librdkafka ]; then
+		git clone https://github.com/edenhill/librdkafka.git
+	fi	
+
+	cd librdkafka
+
+	./configure --prefix=`pwd`/../librdkafka_install
+	make 
+	make install
+fi
+
 echo "all done."

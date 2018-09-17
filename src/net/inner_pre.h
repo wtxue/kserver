@@ -13,6 +13,10 @@
 #define H_DEBUG_MODE
 #endif
 
+#ifndef HTTP_CLIENT_SUPPORTS_SSL
+#define HTTP_CLIENT_SUPPORTS_SSL
+#endif
+
 #include "sys_addrinfo.h"
 #include "sys_sockets.h"
 #include "sockets.h"

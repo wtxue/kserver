@@ -1,6 +1,13 @@
 {
     "structs": 
     [
+    	{
+            "type": "cs_name_t",
+            "members": 
+            [
+                ["string", "Name"]
+            ]
+        },
         {
             "type": "RPCMethod_t",
             "members": 
@@ -41,33 +48,8 @@
                 ["int32_t", "Result"],
                 ["string", "ServerAddr"],
                 ["int32_t", "Interval"],
-                ["int32_t", "ServerPort"],
+                ["string", "ServerPort"],
                 ["string", "ServerIP"]
-            ]
-        },
-        {
-            "type": "DevMap_t",
-            "members": 
-            [
-                ["string", "MAC"],
-                ["string", "Vendor"],
-                ["string", "Model"],
-                ["string", "FirmwareVer"],
-                ["string", "HardwareVer"],
-                ["string", "IPAddr"],
-                ["string", "PlatformID"],                
-                ["string", "remote"],
-                ["string", "rnd"],                
-                ["uint64_t", "last_time"],
-                ["uint64_t", "recv_pkts"],
-
-                ["string", "sn"],
-                ["string", "ssn"],
-                ["string", "ssid1"],
-                ["string", "ssid1pass"],
-                ["string", "adminpass"],
-                ["uint64_t", "dev_id"],
-                ["uint64_t", "plan_id"]
             ]
         },
         {
@@ -114,7 +96,18 @@
                 ["string", "info"],
                 ["int32_t", "loglev"]                
             ]
-        },
+        },    
+        {
+            "type": "DispatcherStat_t",
+            "members": 
+            [
+                ["string", "day"],
+                ["uint64_t", "statOk"],
+                ["uint64_t", "statOkE8c"],	
+                ["uint64_t", "statErrSn"],
+                ["uint64_t", "statErrMd5"]               
+            ]
+        },       
         {
             "type": "DispatcherLog_t",
             "members": 

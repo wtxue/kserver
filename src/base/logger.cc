@@ -13,7 +13,7 @@
 #define RELOG_THRESOLD 5
 #define BUFF_WAIT_TIME 1
 
-#if 0
+#if 1
 #define RLOG_DBG(fmt, args...)                                                                                         \
 	do {                                                                                                               \
 		fprintf(stderr, "[%s:%d] " fmt, __FUNCTION__, __LINE__, ##args);                                               \
@@ -22,14 +22,14 @@
 #define RLOG_DBG(fmt, args...)
 #endif
 
-pid_t gettid() {
-    return syscall(__NR_gettid);
-}
+/* 线程私有数据 */
+__thread char ThreadName[64] = {0};
+
+ring_log* ring_log::_ins = NULL;
 
 pthread_mutex_t ring_log::_mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t ring_log::_cond = PTHREAD_COND_INITIALIZER;
 
-ring_log* ring_log::_ins = NULL;
 pthread_once_t ring_log::_once = PTHREAD_ONCE_INIT;
 uint32_t ring_log::_one_buff_len = 30*1024*1024;//30MB
 
@@ -42,8 +42,7 @@ ring_log::ring_log():
     _env_ok(false),
     _level(INFO),
     _lst_lts(0),
-    _tm()
-{
+    _tm() {
     //create double linked list
     cell_buffer* head = new cell_buffer(_one_buff_len);
     if (!head) {
@@ -71,26 +70,30 @@ ring_log::ring_log():
     _pid = getpid();
 }
 
-void ring_log::init_path(const char* log_dir, const char* prog_name, bool is_console, int level)
-{
+void ring_log::init_path(const char* log_dir, const char* prog_name, bool is_console, int level) {
+	char _bak_log_dir[512] = {0};
+	
     pthread_mutex_lock(&_mutex);
-
     if (is_console) {
 	    _is_console = true;
 		goto UNLOCK;
 	}
 
     strncpy(_prog_name, prog_name, 128);
-    //name format:  name_year-mon-day-t[tid].log.n
     strncpy(_log_dir, log_dir, 512);
 
-    mkdir(_log_dir, 0777);
+    mkdir(_log_dir, 0777);    
     if (access(_log_dir, F_OK | W_OK) == -1) {
         RLOG_DBG("logdir: %s error: %s\n", _log_dir, strerror(errno));
     }
     else {
         _env_ok = true;
     }
+    
+	snprintf(_bak_log_dir,511,"%s/%s",_log_dir,"bak");
+	mkdir(_bak_log_dir, 0777); 
+	RLOG_DBG("mkdir: %s\n",_bak_log_dir);
+	
     if (level > TRACE)
         level = TRACE;
     if (level < FATAL)
@@ -99,6 +102,16 @@ void ring_log::init_path(const char* log_dir, const char* prog_name, bool is_con
 UNLOCK:       
     _level = level;
     pthread_mutex_unlock(&_mutex);
+}
+
+int ring_log::set_level(int level)	{ 
+	if (level > TRACE || level < 0)
+		return -1;
+		
+	pthread_mutex_lock(&_mutex);
+	_level = level; 		
+	pthread_mutex_unlock(&_mutex);
+	return 0; 
 }
 
 void ring_log::persist() {
@@ -143,16 +156,22 @@ void ring_log::persist() {
     }
 }
 
-void ring_log::try_append(const char* lvl, const char* format, ...)
-{
+char *ring_log::GetThreadName() {
+	if (!ThreadName[0]) {
+		prctl(PR_GET_NAME, ThreadName);
+		//RLOG_DBG("\n///////////////////////////////////////////ThreadName:%s\n",ThreadName);
+	}
+	return ThreadName;
+}
+
+void ring_log::try_append(const char* lvl, const char* format, ...) {
     long ws;
     uint64_t curr_sec = _tm.get_curr_time(&ws);
     if (_lst_lts && curr_sec - _lst_lts < RELOG_THRESOLD)
         return ;
 
     char log_line[LOG_LEN_LIMIT];
-    //int prev_len = snprintf(log_line, LOG_LEN_LIMIT, "%s[%d-%02d-%02d %02d:%02d:%02d.%03d]", lvl, _tm.year, _tm.mon, _tm.day, _tm.hour, _tm.min, _tm.sec, ms);
-    int prev_len = snprintf(log_line, LOG_LEN_LIMIT, "%s[%s.%06ld][%s]", lvl, _tm.utc_fmt, ws, get_thread_name());
+    int prev_len = snprintf(log_line, LOG_LEN_LIMIT, "%s[%s.%06ld][%s]", lvl, _tm.utc_fmt, ws, GetThreadName());
 
     va_list arg_ptr;
     va_start(arg_ptr, format);
@@ -180,8 +199,7 @@ void ring_log::try_append(const char* lvl, const char* format, ...)
     else {
         //1. _curr_buf->status = cell_buffer::FREE but _curr_buf->avail_len() < len
         //2. _curr_buf->status = cell_buffer::FULL
-        if (_curr_buf->status == cell_buffer::FREE)
-        {
+        if (_curr_buf->status == cell_buffer::FREE) {
             _curr_buf->status = cell_buffer::FULL;//set to FULL
             cell_buffer* next_buf = _curr_buf->next;
             //tell backend thread
@@ -222,9 +240,9 @@ void ring_log::try_append(const char* lvl, const char* format, ...)
     }
 }
 
-bool ring_log::decis_file(int year, int mon, int day)
-{
-    //TODO: 是根据日志消息的时间写时间？还是自主写时间？  I select 自主写时间
+bool ring_log::decis_file(int year, int mon, int day) {
+	char _cmdline[1024] = {0};
+	
     if (!_env_ok) {
         if (_fp)
             fclose(_fp);
@@ -232,6 +250,10 @@ bool ring_log::decis_file(int year, int mon, int day)
         return false;
     }
     if (!_fp) {
+    	snprintf(_cmdline,1023,"rm -f %s/bak/%s.*; mv -f %s/%s.* %s/bak/",_log_dir,_prog_name,_log_dir,_prog_name,_log_dir);
+    	system(_cmdline);
+    	RLOG_DBG("cmd:%s\n",_cmdline);
+    	
         _year = year, _mon = mon, _day = day;
         char log_path[1024] = {};
         sprintf(log_path, "%s/%s.%d%02d%02d.%u.log", _log_dir, _prog_name, _year, _mon, _day, _pid);
@@ -241,6 +263,11 @@ bool ring_log::decis_file(int year, int mon, int day)
     }
     else if (_day != day) {
         fclose(_fp);
+
+		snprintf(_cmdline,1023,"rm -f %s/bak/%s.*; mv -f %s/%s.* %s/bak/",_log_dir,_prog_name,_log_dir,_prog_name,_log_dir);
+    	system(_cmdline);
+    	RLOG_DBG("cmd:%s\n",_cmdline);
+    	
         char log_path[1024] = {};
         _year = year, _mon = mon, _day = day;
         sprintf(log_path, "%s/%s.%d%02d%02d.%u.log", _log_dir, _prog_name, _year, _mon, _day, _pid);
@@ -253,8 +280,7 @@ bool ring_log::decis_file(int year, int mon, int day)
         char old_path[1024] = {};
         char new_path[1024] = {};
         //mv xxx.log.[i] xxx.log.[i + 1]
-        for (int i = _log_cnt - 1;i > 0; --i)
-        {
+        for (int i = _log_cnt - 1;i > 0; --i) {
             sprintf(old_path, "%s/%s.%d%02d%02d.%u.log.%d", _log_dir, _prog_name, _year, _mon, _day, _pid, i);
             sprintf(new_path, "%s/%s.%d%02d%02d.%u.log.%d", _log_dir, _prog_name, _year, _mon, _day, _pid, i + 1);
             rename(old_path, new_path);

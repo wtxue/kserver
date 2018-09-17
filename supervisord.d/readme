@@ -1,0 +1,25 @@
+centos安装
+yum install supervisor
+
+service supervisord start
+
+安装
+yum install supervisor
+
+设置开机启动
+systemctl enable supervisord.service
+
+配置文件
+supervisord 的配置 文件是 /etc/supervisord.conf 
+自定义配置文件目录是/etc/supervisord.d,该目录下文件已.ini为后缀
+
+
+supervisord 命令
+启动
+systemctl start supervisord.service
+
+关闭
+systemctl stop supervisord.service
+
+重启
+systemctl restart supervisord.service

@@ -135,7 +135,7 @@ CPrepareStatement::~CPrepareStatement() {
 bool CPrepareStatement::Init(MYSQL* mysql, string& sql) {
 	mysql_ping(mysql);
 
-	SQL_TRACE("Init");
+	SQL_TRACE("CPrepareStatement Init");
 	m_stmt = mysql_stmt_init(mysql);
 	if (!m_stmt) {
 		SQL_ERROR("mysql_stmt_init failed");
@@ -253,7 +253,6 @@ int CDBConn::Init() {
 		return 1;
 	}
 
-	SQL_DEBUG("m_mysql:%p",m_mysql);
 	my_bool reconnect = true;
 	mysql_options(m_mysql, MYSQL_OPT_RECONNECT, &reconnect);
 	mysql_options(m_mysql, MYSQL_SET_CHARSET_NAME, "utf8mb4");
@@ -275,7 +274,7 @@ const char* CDBConn::GetPoolName() {
 CResultSetPtr CDBConn::ExecuteQuery(const char* sql_query) {
 	mysql_ping(m_mysql);
 
-	SQL_TRACE("ExecuteQuery:%s",sql_query);
+	//SQL_TRACE("ExecuteQuery:%s",sql_query);
 	if (mysql_real_query(m_mysql, sql_query, strlen(sql_query))) {
 		SQL_ERROR("mysql_real_query failed: %s, sql: %s", mysql_error(m_mysql), sql_query);
 		return nullptr;
@@ -287,7 +286,8 @@ CResultSetPtr CDBConn::ExecuteQuery(const char* sql_query) {
 		return false;
 	}
 
-	CResultSetPtr resSet(new CResultSet(res));
+	//CResultSetPtr resSet(new CResultSet(res));	
+	CResultSetPtr resSet = make_shared<CResultSet>(res);
 	return resSet;
 }
 
@@ -298,7 +298,7 @@ CResultSetPtr CDBConn::ExecuteQuery(const string& sql_query) {
 bool CDBConn::ExecuteUpdate(const char* sql_query) {
 	mysql_ping(m_mysql);
 
-	SQL_TRACE("ExecuteUpdate:%s",sql_query);
+	//SQL_TRACE("ExecuteUpdate:%s",sql_query);
 	if (mysql_real_query(m_mysql, sql_query, strlen(sql_query))) {
 		SQL_ERROR("mysql_real_query failed: %s, sql: %s", mysql_error(m_mysql), sql_query);
 		return false;
@@ -370,7 +370,6 @@ int CDBPool::Init() {
 CDBConn* CDBPool::GetDBConn() {
 	m_free_notify.Lock();
 
-	SQL_TRACE("enter GetDBConn");
 	while (m_free_list.empty()) {
 		SQL_DEBUG("m_free_list is empty");
 		if (m_db_cur_conn_cnt >= m_db_max_conn_cnt) {
@@ -398,7 +397,6 @@ CDBConn* CDBPool::GetDBConn() {
 	m_free_list.pop_front();
 
 	m_free_notify.Unlock();
-	SQL_TRACE("leave GetDBConn");
 	return pConn;
 }
 

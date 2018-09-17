@@ -254,7 +254,7 @@ void SetKeepAlive(net_socket_t fd, bool on) {
                           reinterpret_cast<const char*>(&optval), static_cast<socklen_t>(sizeof optval));
     if (rc != 0) {
         int serrno = errno;
-        LOG_ERROR("setsockopt(SO_KEEPALIVE) failed, errno=:%d %s",serrno, strerror(serrno).c_str());
+        LOG_ERROR("setsockopt(SO_KEEPALIVE) failed, errno:%d %s",serrno, strerror(serrno).c_str());
     }
 }
 
@@ -265,7 +265,7 @@ void SetReuseAddr(net_socket_t fd) {
                           reinterpret_cast<const char*>(&optval), static_cast<socklen_t>(sizeof optval));
     if (rc != 0) {
         int serrno = errno;
-        LOG_ERROR("setsockopt(SO_REUSEADDR) failed, errno=:%d %s",serrno, strerror(serrno).c_str());
+        LOG_ERROR("setsockopt(SO_REUSEADDR) failed, errno:%d %s",serrno, strerror(serrno).c_str());
     }
 }
 
@@ -278,7 +278,7 @@ void SetReusePort(net_socket_t fd) {
     LOG_INFO("setsockopt SO_REUSEPORT fd=%d rc=%d",fd,rc);
     if (rc != 0) {
         int serrno = errno;
-        LOG_ERROR("setsockopt(SO_REUSEPORT) failed, errno=:%d %s",serrno, strerror(serrno).c_str());
+        LOG_ERROR("setsockopt(SO_REUSEPORT) failed, errno:%d %s",serrno, strerror(serrno).c_str());
     }
 #endif
 }
@@ -291,7 +291,7 @@ void SetTCPNoDelay(net_socket_t fd, bool on) {
                           reinterpret_cast<const char*>(&optval), static_cast<socklen_t>(sizeof optval));
     if (rc != 0) {
         int serrno = errno;
-        LOG_ERROR("setsockopt(TCP_NODELAY) failed, errno=:%d %s",serrno, strerror(serrno).c_str());
+        LOG_ERROR("setsockopt(TCP_NODELAY) failed, errno:%d %s",serrno, strerror(serrno).c_str());
     }
 }
 

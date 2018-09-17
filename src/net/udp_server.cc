@@ -48,6 +48,22 @@ public:
         return true;
     }
 
+    bool Listen(const std::string& HostPort) {
+		if (!net::sock::SplitHostPort(HostPort.data(), this->host_, this->port_)) {
+            LOG_ERROR("SplitHostPort error HostPort:%s", HostPort.c_str());
+			return false;
+		}
+		
+        this->addr_ = HostPort;
+        this->fd_ = sock::CreateUDPServer(HostPort);
+        if (this->fd_ < 0) {
+            LOG_ERROR("listen error bind_addr: %s", HostPort.c_str());
+            return false;
+        }
+        sock::SetTimeout(this->fd_, 500);
+        return true;
+    }
+
     bool Listen(int port) {
     	return Listen("0.0.0.0",port);
     }
@@ -135,12 +151,22 @@ bool UDPServer::Init(const std::vector<int>& ports) {
     return true;
 }
 
-bool UDPServer::Init(const std::string& host, int port) {    
+bool UDPServer::Init(const std::string& HostPort) {    
+	LOG_DEBUG("Init HostPort:%s", HostPort.c_str());
     RecvThreadPtr t(new RecvThread(this));
-    bool ret = t->Listen(host,port);
+    bool ret = t->Listen(HostPort);
     assert(ret);
     recv_threads_.push_back(t);
     return ret;
+}
+
+bool UDPServer::Init(const std::vector<std::string>& HostPorts) {
+    for (auto it : HostPorts) {
+        if (!Init(it)) {
+            return false;
+        }
+    }
+    return true;    
 }
 
 /*
@@ -248,8 +274,9 @@ void UDPServer::RecvingLoop(RecvThread* thread) {
         }
 
         // TODO use recvmmsg to improve performance
-
-        UDPMessagePtr recv_msg(new UDPMessage(thread->fd(), recv_buf_size_));
+        //UDPMessagePtr recv_msg(new UDPMessage(thread->fd(), recv_buf_size_));
+        UDPMessagePtr recv_msg = make_shared<UDPMessage>(thread->fd(), recv_buf_size_);
+        
         socklen_t addr_len = sizeof(struct sockaddr);
         int readn = ::recvfrom(thread->fd(), (char*)recv_msg->WriteBegin(), recv_buf_size_, 0, recv_msg->mutable_remote_addr(), &addr_len);
         if (readn >= 0) {

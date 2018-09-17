@@ -20,8 +20,6 @@ enum LOG_LEVEL {
     TRACE,
 };
 
-extern pid_t gettid();
-
 struct utc_timer {
     utc_timer()    {
         struct timeval tv;
@@ -164,13 +162,12 @@ public:
 
     int get_level() const { return _level; }
 
+	int set_level(int level);
+
     void persist();
 
-	char *get_thread_name() {
-		prctl(PR_GET_NAME, _thread_name);
-		return _thread_name;
-	}
-
+	char *GetThreadName();
+	
     void try_append(const char* lvl, const char* format, ...);
 
 private:

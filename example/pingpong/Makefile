@@ -1,9 +1,10 @@
 include ../../kserver.mk
 
+TARGETS := server client
 
-TARGETS = server client
+all:$(TARGETS)
 
-.PHONY: all $(TARGETS)
+.PHONY:all $(TARGETS)
 
 server:server.o
 	$(BUILDEXE)
@@ -11,5 +12,8 @@ server:server.o
 client:client.o
 	$(BUILDEXE)
 
+%.o : %.cc
+	$(CPP) -c $(CXXFLAGS) $(BASE_INCLS) $< -o $@ 
+
 clean:
-	-rm -f *.o *.d $(TARGETS) 
+	-rm -f *.o $(TARGETS) 

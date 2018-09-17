@@ -37,13 +37,13 @@ TCPConn::~TCPConn() {
     assert(status_ == kDisconnected);
 
     if (fd_ >= 0) {
-		//DLOG_TRACE("enter destroy fd_:%d",fd_);
+		LOG_TRACE("enter destroy fd_:%d",fd_);
         assert(chan_);
         assert(fd_ == chan_->fd());
         assert(chan_->IsNoneEvent());
         EVUTIL_CLOSESOCKET(fd_);
         fd_ = INVALID_SOCKET;        
-		//DLOG_TRACE("leave destroy fd");
+		LOG_TRACE("leave destroy fd");
     }
 
     assert(!delay_close_timer_.get());

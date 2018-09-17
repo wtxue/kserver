@@ -20,10 +20,9 @@ public:
 
     bool Init(int port);
     bool Init(const std::vector<int>& ports);
-	bool Init(const std::string& host, int port);        
-	/*
-    bool Init(const std::string& listen_ports); // like "53,5353,1053"
-	*/
+	bool Init(const std::string& HostPort);  
+	bool Init(const std::vector<std::string>& HostPorts);
+
     bool Start();
     void Stop(bool wait_thread_exit);
 

@@ -50,7 +50,8 @@ bool TCPServer::Init() {
 	DLOG_TRACE("TCPServer Init");
     assert(status_ == kNull);
     listener_.reset(new Listener(loop_, listen_addr_));
-    listener_->Listen();
+    if (false == listener_->Listen())
+    	return false;
     status_.store(kInitialized);
     return true;
 }
@@ -196,7 +197,6 @@ void TCPServer::RemoveConnection(const TCPConnPtr& conn) {
 		LOG_DEBUG("conn use_count:%d fd:%d",conn.use_count(),conn->fd());
         assert(this->loop_->IsInLoopThread());
         this->connections_.erase(conn->id());
-		LOG_DEBUG("conn use_count:%d",conn.use_count());
         if (IsStopping() && this->connections_.empty()) {
             // At last, we stop all the working threads
             LOG_DEBUG("stop thread pool");

@@ -80,8 +80,6 @@ private:
 /*
  * TODO:
  * 用MySQL的prepare statement接口来防止SQL注入
- * 暂时只用于插入IMMessage表，因为只有那里有SQL注入的风险，
- * 以后可以把全部接口用这个来实现替换
  */
 class CPrepareStatement {
 public:

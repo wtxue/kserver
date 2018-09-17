@@ -10,6 +10,9 @@
 #define LOG_ERROR(...)     _ERROR(__VA_ARGS__)
 #define LOG_FATAL(...)     _LOG_FATAL(__VA_ARGS__)
 #define DLOG_TRACE(...)    _TRACE(__VA_ARGS__)
+#define APP_TRACE(...)     _TRACE(__VA_ARGS__)
+#define APP_DEBUG(...)     _DEBUG(__VA_ARGS__)
+#define APP_ERROR(...)     _ERROR(__VA_ARGS__)
 #else
 #define LOG_TRACE(...)
 #define LOG_DEBUG(...)

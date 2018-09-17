@@ -1,7 +1,10 @@
+#include <signal.h> 
 #include "tcp_server.h"
 #include "buffer.h"
 #include "tcp_conn.h"
 
+#include "random.h"
+#include "md5.h"
 #include "base64.h"
 #include "config_reader.h"
 #include "logging.h"
@@ -11,10 +14,7 @@
 #include "sdbDataSource.hpp"
 
 #include "mysqlPool.h"
-
 #include "slothjson.h"
-//#include "json/nos_static_msg.h"
-//#include "json/nos_static_db.h"
 
 #include "manager.h"
 
@@ -27,6 +27,31 @@ using namespace sdbclient;
 using namespace bson;
 using namespace sqdb;
 
+/*
+void test_test() {
+	int64_t now = net::Timestamp::Now().Unix();
+	base::Random Random(static_cast<uint32_t>(now));
+	string StrRnd;
+	Random.RandomBinString(32, &StrRnd);
+	LOG_INFO("StrRnd:%s",StrRnd.c_str());
+}
+*/
+
+void SignalUsr1Hander() {
+	LOG_DEBUG("catch SIGUSR1");
+	ring_log *plog = ring_log::ins();
+
+	auto level = plog->get_level();
+	if (level == TRACE) {
+		LOG_INFO("change level TRACE to DEBUG");
+		plog->set_level(DEBUG);
+	}
+
+	if (level == DEBUG) {
+		LOG_INFO("change level DEBUG to TRACE");
+		plog->set_level(TRACE);
+	}
+}
 
 int sqdbInit() {
 	sqdbCl* pDBCl = nullptr;
@@ -42,19 +67,28 @@ int sqdbInit() {
 	pool = sqdbManager::getIns()->GetDbPool();
 	if (!pool) {
 		LOG_ERROR("dbManager get pool err");
-		return -1;
+		return -2;
+	}
+	LOG_DEBUG("GetDbPool get ok:%p",pool);
+
+	auto cl = config_reader::ins()->GetStringList("sqdb", "cl");
+	for (size_t i = 0; i < cl.size(); i++) {
+		auto flag = config_reader::ins()->GetNumber(cl[i], "flag", 0);
+		auto index = config_reader::ins()->GetStringList(cl[i], "index");
+		LOG_DEBUG("i:%d cl:%s flag:%d,index.size():%d", i, cl[i].c_str(), flag, index.size());
+		pDBCl = new sqdbCl(pool, cl[i], flag);
+		if (index.size())
+			pDBCl->PushAllIndex(index);
+
+		if (pDBCl->Init())	{
+			LOG_ERROR("init sqdbCl:%s fail",cl[i].c_str());
+			return -3;
+		}		
+		pool->PutDbCl(pDBCl->GetclMapName(),pDBCl);	
+		LOG_DEBUG("Init cl:%p name:%s ok",pDBCl,pDBCl->GetclFullName().c_str());	
 	}
 	
-	//CSpace.manager_log
-	pDBCl = new sqdbCl(pool, "CSpace","manager_log");
-	if (pDBCl->Init())  {
-		LOG_ERROR("init sqdbCl CSpace.manager_log fail");
-		return -3;
-	}
-
-	pool->PutDbCl(pDBCl->GetclMapName(),pDBCl);
-	LOG_DEBUG("Init cl name:%s ok",pDBCl->GetclFullName().c_str());
-	return 0;
+	return 0;	
 }
 
 int mySqlInit() {
@@ -73,6 +107,27 @@ int mySqlInit() {
 		return -1;
 	}
 
+	return 0;
+}
+
+int ipSearchInit() {
+	IPSearch *finder = IPSearch::getIns();
+	if (!finder) {
+		LOG_ERROR("ipSearchInit failed");
+		return -1;
+	}
+
+	string ip = "123.4.5.68";
+	int Prov;
+	int City;
+
+	ip = "123.4.5.68";
+	finder->QueryToProvCity(ip,Prov,City);
+	LOG_DEBUG("ip:%s,Prov:%d,City:%d",ip.c_str(),Prov,City);
+
+	ip = "210.51.200.123";
+	finder->QueryToProvCity(ip,Prov,City);
+	LOG_DEBUG("ip:%s,Prov:%d,City:%d",ip.c_str(),Prov,City);
 	return 0;
 }
 
@@ -109,19 +164,30 @@ int main(int argc, char* argv[]) {
     // must first init log
 	logInit();
 
-    LOG_INFO("sqdbInit Start first /////////"); 
-	sqdbInit();
+    LOG_INFO("////////////////sqdbInit Start first"); 
+	if (sqdbInit() < 0) {
+		printf("sqdbInit Failed, please check your config\n");
+		return 0;
+	}
 
-    LOG_INFO("mySqlInit Start "); 
+	LOG_INFO("/////////////////////ipSearchInit Start "); 
+	ipSearchInit();
+
+    LOG_INFO("///////////////////////mySqlInit Start "); 
 	mySqlInit();
 
     net::EventLoop base_loop;  
     Server server(&base_loop);
     server.Init();
 
-    LOG_INFO("base loop Start /////////");
-    //base_loop.RunAfter(net::Duration(10.0), &test_test);
-    base_loop.Run();    
+    LOG_INFO("base loop Start init SIGUSR1 /////////"); 
+	std::unique_ptr<net::SignalEventWatcher> ev(new net::SignalEventWatcher(SIGUSR1, &base_loop, &SignalUsr1Hander));
+	ev->Init();
+    ev->AsyncWait();
+	
+	LOG_INFO("base loop Start /////////"); 
+	//base_loop.RunEvery(net::Duration(10.0), &test_test);
+    base_loop.Run();     
     return 0;
 }
 

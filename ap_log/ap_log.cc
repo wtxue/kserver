@@ -30,9 +30,8 @@ namespace ap_log {
 apLogServer::apLogServer(net::EventLoop* loop) {
 	base_loop_ = loop;
     next_conn_id_ = 0;
-	config_deviceLogStatus_ = 0;
+	config_deviceLogStatus_ = 2;
     config_qos_wl_time_ = 0;
-	LOG_TRACE("apLogServer");  
 }
 
 apLogServer::~apLogServer() {
@@ -43,7 +42,7 @@ void apLogServer::DropLoopSqdbClTimer() {
 	slothjson::cs_name_t name_;
 
 	LOG_TRACE("DropLoopSqdbClTimer");
-	sqdbPool* pool = sqdbManager::getIns()->GetDbPool("ap_log");
+	sqdbPool* pool = sqdbManager::getIns()->GetDbPool();
 	if (!pool) {	
 		LOG_ERROR("get pool err");
 		return ;
@@ -62,15 +61,15 @@ void apLogServer::DropLoopSqdbClTimer() {
 	for (size_t i = 0; i < objs.size(); i++) {
 		rc = slothjson::decode(objs[i], name_);
 		if (!rc) {
-			LOG_ERROR("decode ap_log_qos_vip_t err");
+			LOG_ERROR("decode cl name err");
 			break;
 		}
 		
 		LOG_TRACE("i:%d obj:%s name:%s", i, objs[i].c_str(), name_.Name.c_str());
 		snprintf(Name,127,"%s",name_.Name.c_str());
-		start = strstr(Name, "ap_log"); //csNameHead
+		start = strstr(Name, LOG_LOOP_CHECK_HEAD); //csNameHead
 		if (start) {
-			start = Name + strlen("ap_log") + 1; // exp: ap_log_20180626
+			start = Name + strlen(LOG_LOOP_CHECK_HEAD) + 1; // exp: xxxxxxx_20180626
 			parse_time = base_mktime(start);
 			LOG_TRACE("Name:%s parse_time:%u now_time:%u",Name,parse_time,now_time);
 			if (parse_time && (now_time > parse_time) && ((now_time - parse_time) > (7*24*60*60))) {
@@ -80,18 +79,11 @@ void apLogServer::DropLoopSqdbClTimer() {
 			}
 		}
 	}
-
-	int vm_size_kb = 0;  
-	int rss_size_kb = 0;	
-	long long CurCpuTime =  GetCurCpuTime();
-	long long TotalCpuTime =  GetTotalCpuTime();
-	GetCurMemoryUsage(&vm_size_kb, &rss_size_kb);	
-	LOG_DEBUG("CurCpuTime:%lu, TotalCpuTime:%lu, vm_size_kb:%dk, rss_size_kb:%dk", CurCpuTime, TotalCpuTime, vm_size_kb, rss_size_kb);
 }
 
 void apLogServer::CreateLoopSqdbClTimer() {
 	LOG_TRACE("CreateLoopSqdbClTimer");
-	sqdbPool* pool = sqdbManager::getIns()->GetDbPool("ap_log");
+	sqdbPool* pool = sqdbManager::getIns()->GetDbPool();
 	if (!pool) {	
 		LOG_ERROR("get pool err");
 		return ;
@@ -117,7 +109,7 @@ void apLogServer::GetQosSwitchTimer() {
 	size_t i;
 
 	LOG_TRACE("GetQosSwitchTimer");
-	sqdbPool* pool = sqdbManager::getIns()->GetDbPool("ap_log");
+	sqdbPool* pool = sqdbManager::getIns()->GetDbPool();
 	if (!pool) {	
 		LOG_ERROR("get pool err");
 		return ;
@@ -147,12 +139,12 @@ void apLogServer::GetQosSwitchTimer() {
 
 		LOG_TRACE("param_name:%s param_value:%u param_time:%u",config_.param_name.c_str(),config_.param_value,config_.param_time);
 		if (config_.param_name == "deviceLogStatus") {			
-			LOG_DEBUG("deviceLogStatus param_value:%u",config_.param_value);  
+			LOG_TRACE("deviceLogStatus param_value:%u",config_.param_value);  
 			deviceLogStatus_ = config_.param_value;
 		}
 
 		if (config_.param_name == "qos_wl_version") {
-			LOG_DEBUG("qos_wl_version param_value:%u",config_.param_value);  
+			LOG_TRACE("qos_wl_version param_value:%u",config_.param_value);  
 			qos_wl_time_ = config_.param_value;
 		}
 	}
@@ -193,7 +185,6 @@ void apLogServer::GetQosSwitchTimer() {
 		
 		LOG_DEBUG("brfore map macVip_ size:%d",macVip_.size());  
 		for (i = 0; i < objs.size(); i++) {
-		#if 1
 			rc = slothjson::decode(objs[i], vip_);
 			if (!rc) {
 				LOG_ERROR("decode ap_log_qos_vip_t err");
@@ -207,19 +198,6 @@ void apLogServer::GetQosSwitchTimer() {
 			vip->info = vip_.info;
 			vip->loglev = vip_.loglev;
 			macVip_[vip_.mac] = vip;
-		#else
-			
-			std::shared_ptr<ap_log_qos_vip_t> vip(new ap_log_qos_vip_t());
-			ap_log_qos_vip_t &tmp = std::move(vip);
-			rc = slothjson::decode(objs[i], tmp);
-			if (!rc) {
-				LOG_ERROR("decode ap_log_qos_vip_t err");
-				break;
-			}
-			
-			LOG_DEBUG("i:%d obj:%s mac:%s loglev:%d",i,objs[i].c_str(),vip->mac.c_str(),vip->loglev);  
-			macVip_[vip->mac] = vip;
-		#endif
 		}		
 		LOG_DEBUG("after map macVip_ size:%d",macVip_.size());  
 	}
@@ -331,22 +309,21 @@ void apLogServer::OnMessageProcess(MsgStringPtr &Message) {
 		
 		rc = Base64::Encode(res, &base64_res);
 		base64_res = base64_res + "\r\n";			
-		//LOG_DEBUG("base64_res:%s",base64_res.c_str());	
 		Message->GetConn()->Send(base64_res);
-		LOG_DEBUG("Addr:%s,res:%s",Message->GetConn()->AddrToString().c_str(),res.c_str());			
+		LOG_TRACE("Addr:%s,res:%s",Message->GetConn()->AddrToString().c_str(),res.c_str());			
 		return ;
 	}
 
 	if (ap_log_cmd.RPCMethod != "log") {
-		LOG_DEBUG("RPCMethod:%s not log",ap_log_cmd.RPCMethod.c_str());
+		LOG_TRACE("RPCMethod:%s not log",ap_log_cmd.RPCMethod.c_str());
 		return ;
 	}
 	
-	slothjson::ap_log_db_t log_db;
+	slothjson::ap_log_dev_t log_db;
 	string db_obj; 		
 	macVipFlag = GetFindMacVip(ap_log_cmd.params.MAC);
 	if (!macVipFlag) {
-		LOG_DEBUG("mac:%s macVipFlag:%d skip",ap_log_cmd.params.MAC.c_str(),macVipFlag);
+		LOG_TRACE("mac:%s macVipFlag:%d skip",ap_log_cmd.params.MAC.c_str(),macVipFlag);
 		return ;
 	}
 	
@@ -367,14 +344,14 @@ void apLogServer::OnMessageProcess(MsgStringPtr &Message) {
 	log_db.client_ip = Message->GetConn()->remote_addr();
 	log_db.addtime = net::Timestamp::Now().Unix();			
 
-	rc = slothjson::encode<false, slothjson::ap_log_db_t>(log_db, db_obj);	
+	rc = slothjson::encode<false, slothjson::ap_log_dev_t>(log_db, db_obj);	
 	if (!rc) {
 		LOG_ERROR("encode ap_log_db_t err");
 		return ;
 	}
 
 	LOG_TRACE("before insert");
-	sqdbPool* pool = sqdbManager::getIns()->GetDbPool("ap_log");
+	sqdbPool* pool = sqdbManager::getIns()->GetDbPool();
 	if (!pool) {
 		LOG_ERROR("get pool err");
 		return ;
@@ -387,12 +364,11 @@ void apLogServer::OnMessageProcess(MsgStringPtr &Message) {
 		return ;
 	}
 	cl->insert(db_obj);		
-	//LOG_DEBUG("after insert ok:%s",db_obj.c_str());	
-	LOG_TRACE("after insert ok:%s",log_db.mac.c_str());	
+	LOG_TRACE("after insert ok:%s",db_obj.c_str());	
+	//LOG_TRACE("after insert ok:%s",log_db.mac.c_str());	
 }
 
 void apLogServer::OnMessage(const net::TCPConnPtr& conn, net::Buffer* msg) {	
-	//LOG_DEBUG("conn name:%s size:%d",conn->name().c_str(),msg->size());	
 	while (msg->size() >= 100) {
 		const char* crlf = msg->FindCRLF();
 		if (!crlf) 

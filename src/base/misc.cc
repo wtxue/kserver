@@ -10,15 +10,14 @@
 #include <ctype.h>
 #include <limits.h>
 #include <time.h>
+
+#include "logger.h"
 #include "misc.h"
 
 #if 1
-#define MISC_DBG(fmt, args...)                                                                                         \
-	do {                                                                                                               \
-		fprintf(stderr, "[%s:%d] " fmt, __FUNCTION__, __LINE__, ##args);                                               \
-	} while (0)
+#define MISC_DBG(...)     _DEBUG(__VA_ARGS__)
 #else
-#define MISC_DBG(fmt, args...)
+#define MISC_DBG(...)
 #endif
 
 namespace base {
@@ -154,7 +153,7 @@ int b2str(const char* buf, const int bufLen, char *str, const int strLen, bool c
 	int index = 0;
 	
 	for (int i = 0; i < bufLen && index < strLen - 2; i++, index += 2) 	{
-		sprintf(str + index, format, (unsigned char)buf[i]);
+		snprintf((str + index), (strLen - index - 1), format, (unsigned char)buf[i]);
 	}
 	str[index] = '\0';
 	return index;
@@ -287,7 +286,6 @@ uint64_t base_mktime(char *stime) {
 	else
 		return time;
 }
-
 
 TrueRandom::TrueRandom()
     : m_fd(-1) {

@@ -85,7 +85,7 @@ public:
         }
     }
 
-    void Send(net::TCPConnPtr conn, const TlvBox& message) {
+    void Send(net::TCPConnPtr& conn, const TlvBox& message) {
         net::Buffer buf;
         buf.Append(message.GetSerializedBuffer(), message.GetSerializedBytes());
         buf.PrependInt32(message.GetSerializedBytes());

@@ -1,0 +1,50 @@
+{
+    "structs": 
+    [
+        {
+            "type": "cs_name_t",
+            "members": 
+            [
+                ["string", "Name"]
+            ]
+        },
+        {
+            "type": "ap_log_config_t",
+            "members": 
+            [
+                ["string", "param_name"],
+                ["uint64_t", "param_time"],
+                ["uint64_t", "param_value"]
+            ]
+        },
+        {
+            "type": "ap_log_qos_vip_t",
+            "members": 
+            [
+                ["string", "mac"],
+                ["uint64_t", "addtime"],
+                ["string", "info"],
+                ["int32_t", "loglev"]                
+            ]
+        },    
+        {
+            "type": "ap_log_dev_t",
+            "members": 
+            [
+                ["string", "RPCMethod"],
+                ["string", "ID"],
+                ["string", "mac"],
+                ["string", "server"],
+                ["string", "remote"],
+                ["string", "start_time"],
+                ["string", "end_time"],
+                ["string", "client_ip"],
+                ["int32_t", "direction"],
+                ["int32_t", "Result"],
+                ["uint64_t", "addtime"],
+                ["string", "in"],
+                ["string", "out"]
+            ]
+        }
+    ]
+}
